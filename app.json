@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "小飞机去旅行",
+    "slug": "airplane-travel",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#41A6F6",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "需要访问你的相册，把旅行照片存进去过的地方",
+          "cameraPermission": "需要使用相机，拍下旅行中的记忆"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "需要读取相册照片的拍摄地点，自动点亮你去过的城市",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "需要定位服务，把照片的拍摄坐标识别成城市名"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#41A6F6"
+        }
+      ]
+    ],
+    "backgroundColor": "#41A6F6"
+  }
+}
