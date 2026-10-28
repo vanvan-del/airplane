@@ -1,7 +1,6 @@
 import { ComponentType, Ref, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView as RNWebView, WebViewMessageEvent, WebViewProps } from 'react-native-webview';
-import { shadow } from '../theme';
 import { Footprint } from '../types';
 import { buildMapHtml, toPins } from './mapHtml';
 
@@ -43,6 +42,6 @@ export default function FootprintMap({ footprints, onOpen }: Props) {
 }
 
 const styles = StyleSheet.create({
-  map: { height: 340, borderRadius: 24, borderWidth: 3, borderColor: '#fff', overflow: 'hidden', ...shadow },
+  map: { height: 340, overflow: 'hidden' },
   web: { flex: 1, backgroundColor: '#DFF1FF' },
 });

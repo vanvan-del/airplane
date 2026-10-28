@@ -1,5 +1,7 @@
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import FlightScene from './src/components/FlightScene';
 import { Trip } from './src/components/Sections';
 import FootprintsScreen from './src/screens/FootprintsScreen';
@@ -9,6 +11,7 @@ import ResultScreen from './src/screens/ResultScreen';
 import { loadFootprints, mergeFootprints, newFootprint, saveFootprints } from './src/services/footprints';
 import { distanceKm, resolvePlace } from './src/services/geo';
 import { getWeather } from './src/services/weather';
+import { FONT, palette } from './src/theme';
 import { Footprint, Place } from './src/types';
 
 type Stage = 'home' | 'flying' | 'result' | 'footprints' | 'memory';
@@ -22,6 +25,7 @@ async function planTrip(q: TripQuery): Promise<Trip> {
 }
 
 export default function App() {
+  const [fontReady, fontError] = useFonts({ [FONT]: require('./assets/fonts/FusionPixel.otf') });
   const [stage, setStage] = useState<Stage>('home');
   const [query, setQuery] = useState<TripQuery>({ from: '北京', to: '', date: toDateString(new Date()) });
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -79,6 +83,9 @@ export default function App() {
   }, [stage, landed, trip]);
 
   const memory = footprints.find((f) => f.name === memoryOf);
+
+  // 等像素字体加载好再显示，避免先闪一下系统字体
+  if (!fontReady && !fontError) return <View style={{ flex: 1, backgroundColor: palette.sky }} />;
 
   return (
     <>

@@ -1,5 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
+import PixelIcon from '../components/pixel/PixelIcon';
+import { IconName } from '../components/pixel/icons';
 import {
   FoodSection,
   RouteSection,
@@ -9,40 +12,39 @@ import {
   Trip,
   WeatherSection,
 } from '../components/Sections';
-import { colors, shadow, topInset } from '../theme';
+import { BORDER, palette, px, steps, topInset } from '../theme';
 
 interface Tile {
   key: string;
-  emoji: string;
+  icon: IconName;
   title: string;
   color: string;
   render: (trip: Trip) => ReactNode;
 }
 
 const TILES: Tile[] = [
-  { key: 'transport', emoji: '🚄', title: '交通比价', color: '#FFE3D8', render: (t) => <TransportSection trip={t} /> },
-  { key: 'sights', emoji: '🏞️', title: '必去景点', color: '#DDF3FF', render: (t) => <SpotsSection trip={t} kind="sight" /> },
-  { key: 'photo', emoji: '📸', title: '打卡拍照', color: '#FFE0EC', render: (t) => <SpotsSection trip={t} kind="photo" /> },
-  { key: 'weather', emoji: '🌤️', title: '天气穿搭', color: '#FFF4D6', render: (t) => <WeatherSection trip={t} /> },
-  { key: 'food', emoji: '🍜', title: '地道美食', color: '#E3F9EE', render: (t) => <FoodSection trip={t} /> },
-  { key: 'route', emoji: '🗺️', title: '推荐路线', color: '#E9E4FF', render: (t) => <RouteSection trip={t} /> },
-  { key: 'ticket', emoji: '🎫', title: '门票指南', color: '#FFEBD6', render: (t) => <TicketSection trip={t} /> },
+  { key: 'transport', icon: 'train', title: '交通比价', color: palette.orange, render: (t) => <TransportSection trip={t} /> },
+  { key: 'sights', icon: 'temple', title: '必去景点', color: palette.cyan, render: (t) => <SpotsSection trip={t} kind="sight" /> },
+  { key: 'photo', icon: 'camera', title: '打卡拍照', color: palette.lime, render: (t) => <SpotsSection trip={t} kind="photo" /> },
+  { key: 'weather', icon: 'sun', title: '天气穿搭', color: palette.sky, render: (t) => <WeatherSection trip={t} /> },
+  { key: 'food', icon: 'bowl', title: '地道美食', color: palette.white, render: (t) => <FoodSection trip={t} /> },
+  { key: 'route', icon: 'map', title: '推荐路线', color: palette.grey, render: (t) => <RouteSection trip={t} /> },
+  { key: 'ticket', icon: 'ticket', title: '门票指南', color: palette.yellow, render: (t) => <TicketSection trip={t} /> },
 ];
 
+// 关卡图标：依次“咔”地弹出来，只有 3 个缩放档位
 function TileButton({ tile, index, onPress }: { tile: Tile; index: number; onPress: () => void }) {
   const pop = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.spring(pop, { toValue: 1, delay: index * 90, friction: 5, useNativeDriver: true }).start();
+    Animated.timing(pop, { toValue: 1, duration: 240, delay: index * 110, easing: steps(3), useNativeDriver: true }).start();
   }, [pop, index]);
+  const scale = pop.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
   return (
-    <Animated.View style={[styles.tileWrap, { transform: [{ scale: pop }], opacity: pop }]}>
-      <Pressable
-        style={({ pressed }) => [styles.tile, { backgroundColor: tile.color }, pressed && { transform: [{ scale: 0.94 }] }]}
-        onPress={onPress}
-      >
-        <Text style={styles.tileEmoji}>{tile.emoji}</Text>
-        <Text style={styles.tileTitle}>{tile.title}</Text>
-      </Pressable>
+    <Animated.View style={[styles.tileWrap, { opacity: pop.interpolate({ inputRange: [0, 0.01, 1], outputRange: [0, 1, 1] }), transform: [{ scale }] }]}>
+      <PixelButton onPress={onPress} bg={tile.color} contentStyle={styles.tile} accessibilityLabel={tile.title}>
+        <PixelIcon name={tile.icon} scale={4} />
+        <Text style={px(12)}>{tile.title}</Text>
+      </PixelButton>
     </Animated.View>
   );
 }
@@ -61,30 +63,33 @@ export default function ResultScreen({ trip, visited, onVisited, onBack }: Props
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12}>
-          <Text style={styles.back}>‹ 重新出发</Text>
+        <Pressable onPress={onBack} hitSlop={12} style={styles.row} accessibilityRole="button">
+          <PixelIcon name="back" scale={2} tint={palette.white} />
+          <Text style={px(12, palette.white)}>重新出发</Text>
         </Pressable>
-        <Text style={styles.arrived}>🛬 已抵达</Text>
-        <Text style={styles.city}>{trip.to.name}</Text>
-        <Text style={styles.meta}>
+        <Text style={[px(12, palette.cyan), { marginTop: 10 }]}>STAGE CLEAR · 已抵达</Text>
+        <Text style={[px(48, palette.white), styles.city]}>{trip.to.name}</Text>
+        <Text style={px(12, palette.grey)}>
           {trip.from.name} → {trip.to.name} · {trip.date}
         </Text>
-        <View style={styles.badges}>
+        <View style={[styles.row, { marginTop: 10, flexWrap: 'wrap' }]}>
           {w && (
-            <View style={styles.weatherBadge}>
-              <Text style={styles.weatherText}>
-                {w.emoji} {w.desc} {w.tMin}°~{w.tMax}°C
+            <PixelBox contentStyle={styles.badge}>
+              <PixelIcon name={w.code <= 2 ? 'sun' : 'cloud'} scale={2} />
+              <Text style={px(12)}>
+                {w.desc} {w.tMin}°~{w.tMax}°C
               </Text>
-            </View>
+            </PixelBox>
           )}
-          <Pressable style={[styles.weatherBadge, styles.visitBadge]} onPress={onVisited}>
-            <Text style={styles.weatherText}>{visited ? '📷 这里的记忆' : '📍 我去过这里'}</Text>
-          </Pressable>
+          <PixelButton onPress={onVisited} bg={palette.yellow} contentStyle={styles.badge}>
+            <PixelIcon name={visited ? 'photo' : 'pin'} scale={2} />
+            <Text style={px(12)}>{visited ? '这里的记忆' : '我去过这里'}</Text>
+          </PixelButton>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.grid}>
-        <Text style={styles.hint}>点图标查看详情 👇</Text>
+        <Text style={px(12, palette.slate)}>选择一个关卡查看详情 ▼</Text>
         <View style={styles.tiles}>
           {TILES.map((tile, i) => (
             <TileButton key={tile.key} tile={tile} index={i} onPress={() => setOpen(tile)} />
@@ -92,20 +97,21 @@ export default function ResultScreen({ trip, visited, onVisited, onBack }: Props
         </View>
       </ScrollView>
 
-      <Modal visible={open != null} animationType="slide" transparent onRequestClose={() => setOpen(null)}>
+      <Modal visible={open != null} animationType="fade" transparent onRequestClose={() => setOpen(null)}>
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(null)} />
-          <View style={styles.sheet}>
+          <PixelBox style={styles.sheetWrap} contentStyle={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>
-                {open?.emoji} {open?.title}
-              </Text>
-              <Pressable onPress={() => setOpen(null)} hitSlop={12}>
-                <Text style={styles.close}>✕</Text>
+              <View style={styles.row}>
+                {open && <PixelIcon name={open.icon} scale={2} />}
+                <Text style={px(18, palette.white)}>{open?.title}</Text>
+              </View>
+              <Pressable onPress={() => setOpen(null)} hitSlop={12} accessibilityLabel="关闭">
+                <PixelIcon name="close" scale={2} tint={palette.white} />
               </Pressable>
             </View>
-            <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>{open?.render(trip)}</ScrollView>
-          </View>
+            <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 28 }}>{open?.render(trip)}</ScrollView>
+          </PixelBox>
         </View>
       </Modal>
     </View>
@@ -113,53 +119,33 @@ export default function ResultScreen({ trip, visited, onVisited, onBack }: Props
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper },
+  root: { flex: 1, backgroundColor: palette.sky },
   header: {
-    backgroundColor: colors.sky,
+    backgroundColor: palette.navy,
     paddingTop: topInset,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+    borderBottomWidth: 4,
+    borderColor: palette.ink,
   },
-  back: { fontSize: 16, fontWeight: '700', color: colors.navy },
-  arrived: { fontSize: 16, color: colors.navy, marginTop: 12, opacity: 0.8 },
-  city: { fontSize: 40, fontWeight: '900', color: colors.navy },
-  meta: { fontSize: 14, color: colors.navy, opacity: 0.75, marginTop: 2 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  visitBadge: { backgroundColor: colors.sun },
-  weatherBadge: {
-    backgroundColor: colors.card,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  weatherText: { fontSize: 15, fontWeight: '700', color: colors.navy },
-  grid: { padding: 16, paddingBottom: 40 },
-  hint: { fontSize: 14, color: colors.muted, marginBottom: 12, marginLeft: 4 },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  city: { textShadowColor: palette.ink, textShadowOffset: { width: 4, height: 4 }, textShadowRadius: 0 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  grid: { padding: 16, paddingBottom: 40, gap: 12 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   tileWrap: { width: '31%' },
-  tile: {
-    aspectRatio: 1,
-    borderRadius: 24,
+  tile: { aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(26,28,44,0.6)', justifyContent: 'flex-end', padding: 10 },
+  sheetWrap: { maxHeight: '86%' },
+  sheet: { backgroundColor: palette.white, flexShrink: 1 },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-    ...shadow,
+    backgroundColor: palette.navy,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: BORDER,
+    borderColor: palette.ink,
   },
-  tileEmoji: { fontSize: 40 },
-  tileTitle: { fontSize: 14, fontWeight: '800', color: colors.navy, marginTop: 6 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(29,53,87,0.4)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    maxHeight: '85%',
-  },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  sheetTitle: { fontSize: 22, fontWeight: '900', color: colors.navy },
-  close: { fontSize: 22, color: colors.muted, fontWeight: '700' },
 });

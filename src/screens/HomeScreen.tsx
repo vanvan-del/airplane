@@ -1,19 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Clouds from '../components/Clouds';
+import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
+import PixelChip, { pixelInput } from '../components/pixel/PixelChip';
+import PixelIcon from '../components/pixel/PixelIcon';
 import { HOT_DESTINATIONS } from '../data/cities';
-import { colors, shadow, topInset } from '../theme';
+import { palette, px, steps, topInset } from '../theme';
 
 export interface TripQuery {
   from: string;
@@ -54,83 +46,99 @@ export default function HomeScreen({ initial, error, footprintCount, onTakeOff, 
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [date, setDate] = useState(initial.date);
+  const [blink, setBlink] = useState(true);
   const bob = useRef(new Animated.Value(0)).current;
   const dates = quickDates();
 
+  // 小飞机上下浮动：只有 3 个高度，一格一格跳
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(bob, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 1, duration: 900, easing: steps(3), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 900, easing: steps(3), useNativeDriver: true }),
       ]),
     );
     loop.start();
-    return () => loop.stop();
+    const id = setInterval(() => setBlink((b) => !b), 500);
+    return () => {
+      loop.stop();
+      clearInterval(id);
+    };
   }, [bob]);
 
-  const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -14] });
-  const rotate = bob.interpolate({ inputRange: [0, 1], outputRange: ['-4deg', '4deg'] });
+  const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
   const canGo = from.trim().length > 0 && to.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Clouds />
+      <View style={styles.ground} pointerEvents="none" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Animated.Text style={[styles.plane, { transform: [{ translateY }, { rotate }] }]}>✈️</Animated.Text>
-        <Text style={styles.title}>小飞机去旅行</Text>
-        <Text style={styles.subtitle}>输入目的地，小飞机帮你找最省钱的出行方式</Text>
-        <Pressable style={styles.footprintBtn} onPress={onFootprints}>
-          <Text style={styles.footprintText}>🗺️ 我的足迹 · 已点亮 {footprintCount} 城</Text>
-        </Pressable>
+        <Animated.View style={[styles.hero, { transform: [{ translateY }] }]}>
+          <PixelIcon name="plane" scale={7} />
+        </Animated.View>
+        <Text style={[px(36, palette.white), styles.title]}>小飞机去旅行</Text>
+        <Text style={[px(12, palette.ink), styles.subtitle]}>输入目的地，帮你找最省钱的出行方式</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>🏠 从哪出发</Text>
-          <TextInput style={styles.input} value={from} onChangeText={setFrom} placeholder="例如：北京" />
+        <PixelButton onPress={onFootprints} style={styles.footprintBtn} bg={palette.yellow} contentStyle={styles.row}>
+          <PixelIcon name="globe" scale={2} />
+          <Text style={px(12)}>我的足迹 · 已点亮 {footprintCount} 城</Text>
+        </PixelButton>
 
-          <Pressable
-            style={styles.swap}
-            onPress={() => {
-              setFrom(to);
-              setTo(from);
-            }}
-          >
-            <Text style={styles.swapText}>⇅</Text>
-          </Pressable>
+        <PixelBox contentStyle={styles.card}>
+          <View style={styles.cardTitle}>
+            <Text style={px(12, palette.white)}>行程设置</Text>
+          </View>
 
-          <Text style={styles.label}>🚩 想去哪里</Text>
-          <TextInput style={styles.input} value={to} onChangeText={setTo} placeholder="例如：大理" />
+          <View style={styles.row}>
+            <PixelIcon name="house" scale={2} />
+            <Text style={px(12)}>从哪出发</Text>
+          </View>
+          <TextInput style={pixelInput} value={from} onChangeText={setFrom} placeholder="例如：北京" placeholderTextColor={palette.grey} />
 
-          <Text style={styles.label}>📅 出发日期</Text>
+          <View style={[styles.row, { justifyContent: 'space-between' }]}>
+            <View style={styles.row}>
+              <PixelIcon name="flag" scale={2} />
+              <Text style={px(12)}>想去哪里</Text>
+            </View>
+            <PixelChip
+              label="⇅ 对调"
+              onPress={() => {
+                setFrom(to);
+                setTo(from);
+              }}
+            />
+          </View>
+          <TextInput style={pixelInput} value={to} onChangeText={setTo} placeholder="例如：大理" placeholderTextColor={palette.grey} />
+
+          <Text style={px(12)}>出发日期</Text>
           <View style={styles.chips}>
             {dates.map((d) => (
-              <Pressable
-                key={d.label}
-                style={[styles.chip, date === d.value && styles.chipActive]}
-                onPress={() => setDate(d.value)}
-              >
-                <Text style={[styles.chipText, date === d.value && styles.chipTextActive]}>{d.label}</Text>
-              </Pressable>
+              <PixelChip key={d.label} label={d.label} active={date === d.value} onPress={() => setDate(d.value)} />
             ))}
           </View>
-          <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <TextInput style={pixelInput} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor={palette.grey} />
 
-          {error && <Text style={styles.error}>⚠️ {error}</Text>}
+          {error && <Text style={px(12, palette.red)}>！{error}</Text>}
 
-          <Pressable
-            style={({ pressed }) => [styles.goButton, !canGo && styles.goDisabled, pressed && { transform: [{ scale: 0.96 }] }]}
+          <PixelButton
+            bg={palette.orange}
             disabled={!canGo}
             onPress={() => onTakeOff({ from: from.trim(), to: to.trim(), date })}
+            contentStyle={styles.go}
+            accessibilityLabel="起飞"
           >
-            <Text style={styles.goText}>起飞！🛫</Text>
-          </Pressable>
-        </View>
+            <Text style={[px(24, palette.white), { opacity: canGo && !blink ? 0.6 : 1 }]}>▶ 起飞！</Text>
+          </PixelButton>
+        </PixelBox>
 
-        <Text style={styles.hotTitle}>🔥 热门目的地</Text>
+        <View style={[styles.row, { marginTop: 20 }]}>
+          <PixelIcon name="star" scale={2} />
+          <Text style={px(18, palette.ink)}>热门目的地</Text>
+        </View>
         <View style={styles.chips}>
           {HOT_DESTINATIONS.map((name) => (
-            <Pressable key={name} style={[styles.chip, styles.hotChip]} onPress={() => setTo(name)}>
-              <Text style={styles.chipText}>{name}</Text>
-            </Pressable>
+            <PixelChip key={name} label={name} active={to === name} onPress={() => setTo(name)} />
           ))}
         </View>
       </ScrollView>
@@ -139,70 +147,16 @@ export default function HomeScreen({ initial, error, footprintCount, onTakeOff, 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.sky },
-  content: { paddingTop: topInset, paddingHorizontal: 20, paddingBottom: 40 },
-  plane: { fontSize: 72, textAlign: 'center', marginTop: 8 },
-  title: { fontSize: 32, fontWeight: '900', color: colors.navy, textAlign: 'center', marginTop: 4 },
-  subtitle: { fontSize: 14, color: colors.navy, opacity: 0.75, textAlign: 'center', marginTop: 6, marginBottom: 14 },
-  footprintBtn: {
-    alignSelf: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginBottom: 18,
-    ...shadow,
-  },
-  footprintText: { fontSize: 15, fontWeight: '800', color: colors.navy },
-  card: { backgroundColor: colors.card, borderRadius: 24, padding: 20, ...shadow },
-  label: { fontSize: 15, fontWeight: '700', color: colors.navy, marginBottom: 8, marginTop: 4 },
-  input: {
-    backgroundColor: colors.paper,
-    borderWidth: 2,
-    borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 17,
-    color: colors.navy,
-    marginBottom: 12,
-  },
-  swap: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: -4,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.sun,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swapText: { fontSize: 20, fontWeight: '900', color: colors.navy },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.paper,
-    borderWidth: 2,
-    borderColor: colors.line,
-  },
-  chipActive: { backgroundColor: colors.skyDeep, borderColor: colors.skyDeep },
-  chipText: { fontSize: 14, fontWeight: '600', color: colors.navy },
-  chipTextActive: { color: '#fff' },
-  hotChip: { backgroundColor: colors.card, borderColor: colors.card },
-  error: { color: colors.coral, fontWeight: '700', marginBottom: 10 },
-  goButton: {
-    backgroundColor: colors.coral,
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 6,
-    borderBottomWidth: 5,
-    borderBottomColor: '#D85A3B',
-  },
-  goDisabled: { opacity: 0.5 },
-  goText: { color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 2 },
-  hotTitle: { fontSize: 17, fontWeight: '800', color: colors.navy, marginTop: 24, marginBottom: 10 },
+  root: { flex: 1, backgroundColor: palette.sky },
+  ground: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 120, backgroundColor: palette.green, borderTopWidth: 4, borderColor: palette.ink },
+  content: { paddingTop: topInset, paddingHorizontal: 16, paddingBottom: 40, gap: 10 },
+  hero: { alignSelf: 'center', marginTop: 8 },
+  title: { textAlign: 'center', textShadowColor: palette.ink, textShadowOffset: { width: 4, height: 4 }, textShadowRadius: 0 },
+  subtitle: { textAlign: 'center', marginBottom: 4 },
+  footprintBtn: { alignSelf: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  card: { padding: 14, paddingTop: 0, gap: 10 },
+  cardTitle: { backgroundColor: palette.navy, marginHorizontal: -14, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  go: { alignItems: 'center', paddingVertical: 10 },
 });

@@ -41,7 +41,8 @@
         {
           "locationWhenInUsePermission": "需要定位服务，把照片的拍摄坐标识别成城市名"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

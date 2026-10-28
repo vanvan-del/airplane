@@ -4,8 +4,11 @@ import FootprintMap from '../components/FootprintMap';
 import GlobeView from '../components/GlobeView';
 import { CITIES } from '../data/cities';
 import PhotoImage from '../components/PhotoImage';
+import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
+import PixelChip, { pixelInput } from '../components/pixel/PixelChip';
+import PixelIcon from '../components/pixel/PixelIcon';
 import { ScanProgress, scanAlbum } from '../services/photoScan';
-import { colors, shadow, topInset } from '../theme';
+import { palette, px, topInset } from '../theme';
 import { Footprint } from '../types';
 
 interface Props {
@@ -51,7 +54,7 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
               '另外手机浏览器上传照片时常常会去掉位置信息，在电脑上选照片或者用手机 App 扫描更可靠。',
           }
         : {
-            title: '扫描完成 🎉',
+            title: '扫描完成！',
             text:
               `看了 ${result.scanned} 张照片，其中 ${result.located} 张带拍摄地点，识别出 ${result.footprints.length} 个地方：` +
               result.footprints.map((f) => f.name).join('、'),
@@ -71,180 +74,175 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={onBack} hitSlop={12}>
-          <Text style={styles.back}>‹ 返回</Text>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} hitSlop={12} style={styles.row} accessibilityRole="button">
+          <PixelIcon name="back" scale={2} tint={palette.white} />
+          <Text style={px(12, palette.white)}>返回</Text>
         </Pressable>
-        <Text style={styles.title}>🗺️ 我的足迹</Text>
+        <View style={[styles.row, { marginTop: 10 }]}>
+          <PixelIcon name="globe" scale={3} />
+          <Text style={[px(36, palette.white), styles.title]}>我的足迹</Text>
+        </View>
+      </View>
 
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.stats}>
-          <Stat value={countries.size} label="国家/地区" />
-          <Stat value={footprints.length} label="点亮城市" />
-          <Stat value={footprints.reduce((n, f) => n + f.visits.length, 0)} label="旅行次数" />
-          <Stat value={photoCount} label="记忆照片" />
+          <Stat value={countries.size} label="国家" color={palette.cyan} />
+          <Stat value={footprints.length} label="城市" color={palette.yellow} />
+          <Stat value={footprints.reduce((n, f) => n + f.visits.length, 0)} label="旅行" color={palette.lime} />
+          <Stat value={photoCount} label="照片" color={palette.orange} />
         </View>
 
-        <View style={styles.tabs}>
-          {(['globe', 'map'] as const).map((v) => (
-            <Pressable key={v} style={[styles.tab, view === v && styles.tabActive]} onPress={() => setView(v)}>
-              <Text style={[styles.tabText, view === v && styles.tabTextActive]}>{v === 'globe' ? '🌍 地球' : '🗺️ 地图'}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.row}>
+          <PixelChip label="地球" active={view === 'globe'} onPress={() => setView('globe')} />
+          <PixelChip label="地图" active={view === 'map'} onPress={() => setView('map')} />
         </View>
         {view === 'globe' ? (
           <GlobeView footprints={footprints} onOpen={onOpen} />
         ) : (
-          <FootprintMap footprints={footprints} onOpen={onOpen} />
+          <PixelBox contentStyle={{ padding: 0 }}>
+            <FootprintMap footprints={footprints} onOpen={onOpen} />
+          </PixelBox>
         )}
-        <Text style={styles.mapHint}>
-          {view === 'globe' ? '拖动转地球，双指或 ＋－ 缩放；黄色是去过的国家' : '高德地图，可拖动缩放；点小旗子看回忆'}
+        <Text style={[px(12, palette.ink), { textAlign: 'center' }]}>
+          {view === 'globe' ? '拖动转地球 · 双指或＋－缩放 · 黄色是去过的国家' : '高德地图，可拖动缩放；点小旗子看回忆'}
         </Text>
 
-        <Pressable style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.85 }]} onPress={scan}>
-          <Text style={styles.scanText}>
-            {Platform.OS === 'web' ? '📸 选一批照片，自动点亮去过的地方' : '📸 扫描相册，自动点亮去过的地方'}
-          </Text>
-          <Text style={styles.scanSub}>根据照片的拍摄地点识别城市，照片自动存进对应的记忆</Text>
-        </Pressable>
-        {notice && (
-          <View style={styles.notice}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.noticeTitle}>{notice.title}</Text>
-              <Text style={styles.noticeText}>{notice.text}</Text>
-            </View>
-            <Pressable onPress={() => setNotice(null)} hitSlop={10}>
-              <Text style={styles.noticeClose}>✕</Text>
-            </Pressable>
+        <PixelButton bg={palette.orange} onPress={scan} contentStyle={styles.scanBtn}>
+          <View style={styles.row}>
+            <PixelIcon name="camera" scale={2} />
+            <Text style={px(12, palette.white)}>
+              {Platform.OS === 'web' ? '选一批照片，自动点亮去过的地方' : '扫描相册，自动点亮去过的地方'}
+            </Text>
           </View>
+          <Text style={px(12, palette.yellow)}>按照片的拍摄地点识别城市</Text>
+        </PixelButton>
+        {notice && (
+          <PixelBox bg={palette.yellow} contentStyle={styles.notice}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={px(18)}>{notice.title}</Text>
+              <Text style={px(12)}>{notice.text}</Text>
+            </View>
+            <Pressable onPress={() => setNotice(null)} hitSlop={10} accessibilityLabel="关闭提示">
+              <PixelIcon name="close" scale={1} />
+            </Pressable>
+          </PixelBox>
         )}
-        <Text style={styles.progress}>
-          已点亮 {footprints.filter((f) => CITIES.some((c) => c.name === f.name)).length} / {CITIES.length} 个热门城市
-        </Text>
 
-        <Text style={styles.section}>📍 补录去过的城市</Text>
-        <View style={styles.addRow}>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="例如：桂林" onSubmitEditing={add} />
-          <Pressable style={styles.addBtn} onPress={add} disabled={busy}>
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.addText}>点亮</Text>}
-          </Pressable>
+        <PixelBox bg={palette.white} contentStyle={styles.progressBox}>
+          <Text style={px(12)}>
+            热门城市收集 {footprints.filter((f) => CITIES.some((c) => c.name === f.name)).length} / {CITIES.length}
+          </Text>
+          <View style={styles.bar}>
+            <View
+              style={[
+                styles.barFill,
+                { width: `${(100 * footprints.filter((f) => CITIES.some((c) => c.name === f.name)).length) / CITIES.length}%` },
+              ]}
+            />
+          </View>
+        </PixelBox>
+
+        <View style={styles.row}>
+          <PixelIcon name="pin" scale={2} />
+          <Text style={px(18)}>补录去过的城市</Text>
         </View>
-        {error && <Text style={styles.error}>⚠️ {error}</Text>}
+        <View style={styles.addRow}>
+          <TextInput
+            style={[pixelInput, { flex: 1 }]}
+            value={city}
+            onChangeText={setCity}
+            placeholder="例如：桂林"
+            placeholderTextColor={palette.grey}
+            onSubmitEditing={add}
+          />
+          <PixelButton onPress={add} disabled={busy} bg={palette.orange} contentStyle={styles.addBtn}>
+            {busy ? <ActivityIndicator color={palette.white} /> : <Text style={px(12, palette.white)}>点亮</Text>}
+          </PixelButton>
+        </View>
+        {error && <Text style={px(12, palette.red)}>！{error}</Text>}
 
-        <Text style={styles.section}>📒 去过的地方</Text>
+        <View style={styles.row}>
+          <PixelIcon name="star" scale={2} />
+          <Text style={px(18)}>去过的地方</Text>
+        </View>
         {sorted.map((f) => (
-          <Pressable key={f.name} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]} onPress={() => onOpen(f.name)}>
+          <PixelButton key={f.name} onPress={() => onOpen(f.name)} contentStyle={styles.card}>
             {f.photos[0] ? (
               <PhotoImage memory={f.photos[0]} style={styles.cover} />
             ) : (
               <View style={[styles.cover, styles.coverEmpty]}>
-                <Text style={{ fontSize: 30 }}>📷</Text>
+                <PixelIcon name="camera" scale={3} />
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{f.name}</Text>
-              <Text style={styles.cardMeta}>
-                最近：{f.visits.at(-1)}　去过 {f.visits.length} 次
+              <Text style={px(18)}>{f.name}</Text>
+              <Text style={px(12, palette.slate)}>
+                最近 {f.visits.at(-1)} · {f.visits.length} 次 · {f.photos.length} 张
               </Text>
-              <Text style={styles.cardMeta}>🖼️ {f.photos.length} 张照片</Text>
               {f.note ? (
-                <Text style={styles.cardNote} numberOfLines={1}>
+                <Text style={px(12)} numberOfLines={1}>
                   “{f.note}”
                 </Text>
               ) : null}
             </View>
-            <Text style={styles.chevron}>›</Text>
-          </Pressable>
+            <Text style={px(12)}>▶</Text>
+          </PixelButton>
         ))}
-        {sorted.length === 0 && <Text style={styles.emptyText}>在目的地页面点「📍 我去过这里」，或者在上面补录城市。</Text>}
+        {sorted.length === 0 && (
+          <Text style={px(12, palette.ink)}>在目的地页面点「我去过这里」，或者在上面补录城市。</Text>
+        )}
       </ScrollView>
 
       <Modal visible={progress != null} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={styles.progressCard}>
-            <Text style={{ fontSize: 44 }}>✈️</Text>
-            <Text style={styles.progressTitle}>
+          <PixelBox bg={palette.white} style={{ width: '80%' }} contentStyle={styles.progressCard}>
+            <PixelIcon name="plane" scale={5} />
+            <Text style={[px(12), { textAlign: 'center' }]}>
               {progress?.stage === 'reading' && `正在读取相册… ${progress.done} 张`}
               {progress?.stage === 'locating' && `正在识别拍摄地点 ${progress.done} / ${progress.total}`}
               {progress?.stage === 'saving' && `正在识别城市 ${progress.done} / ${progress.total}`}
             </Text>
-            <ActivityIndicator color={colors.coral} style={{ marginVertical: 12 }} />
-            <Pressable onPress={() => (cancelled.current = true)}>
-              <Text style={styles.cancel}>取消</Text>
-            </Pressable>
-          </View>
+            <View style={[styles.bar, { alignSelf: 'stretch' }]}>
+              <View style={[styles.barFill, { width: `${progress && progress.total ? (100 * progress.done) / progress.total : 10}%` }]} />
+            </View>
+            <PixelButton onPress={() => (cancelled.current = true)} contentStyle={styles.addBtn}>
+              <Text style={px(12)}>取消</Text>
+            </PixelButton>
+          </PixelBox>
         </View>
       </Modal>
     </View>
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    <PixelBox bg={color} style={{ flex: 1 }} contentStyle={styles.stat}>
+      <Text style={px(24)}>{value}</Text>
+      <Text style={px(12)}>{label}</Text>
+    </PixelBox>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper },
-  content: { paddingTop: topInset, paddingHorizontal: 16, paddingBottom: 40 },
-  back: { fontSize: 16, fontWeight: '700', color: colors.navy },
-  title: { fontSize: 30, fontWeight: '900', color: colors.navy, marginTop: 10, marginBottom: 14 },
-  stats: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  stat: { flex: 1, backgroundColor: colors.card, borderRadius: 18, paddingVertical: 12, alignItems: 'center', ...shadow },
-  statValue: { fontSize: 26, fontWeight: '900', color: colors.coral },
-  statLabel: { fontSize: 12, color: colors.muted, fontWeight: '700', marginTop: 2 },
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.card },
-  tabActive: { backgroundColor: colors.navy },
-  tabText: { fontWeight: '800', color: colors.navy },
-  tabTextActive: { color: '#fff' },
-  mapHint: { textAlign: 'center', color: colors.muted, fontSize: 12, marginTop: 8 },
-  scanBtn: { backgroundColor: colors.coral, borderRadius: 18, padding: 14, marginTop: 14, alignItems: 'center', ...shadow },
-  notice: { flexDirection: 'row', gap: 10, backgroundColor: colors.card, borderRadius: 16, padding: 14, marginTop: 10, ...shadow },
-  noticeTitle: { fontSize: 15, fontWeight: '900', color: colors.navy },
-  noticeText: { fontSize: 13, color: colors.muted, lineHeight: 19, marginTop: 4 },
-  noticeClose: { fontSize: 16, color: colors.muted, fontWeight: '700' },
-  scanText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  scanSub: { color: '#fff', fontSize: 12, opacity: 0.9, marginTop: 4 },
-  overlay: { flex: 1, backgroundColor: 'rgba(29,53,87,0.45)', alignItems: 'center', justifyContent: 'center' },
-  progressCard: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '80%', alignItems: 'center' },
-  progressTitle: { fontSize: 16, fontWeight: '800', color: colors.navy, textAlign: 'center', marginTop: 8 },
-  cancel: { color: colors.muted, fontWeight: '700', padding: 6 },
-  progress: { textAlign: 'center', color: colors.muted, fontWeight: '700', marginTop: 10 },
-  section: { fontSize: 18, fontWeight: '900', color: colors.navy, marginTop: 22, marginBottom: 10 },
-  addRow: { flexDirection: 'row', gap: 10 },
-  input: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: colors.navy,
-  },
-  addBtn: { backgroundColor: colors.coral, borderRadius: 14, paddingHorizontal: 20, justifyContent: 'center' },
-  addText: { color: '#fff', fontWeight: '900', fontSize: 16 },
-  error: { color: colors.coral, fontWeight: '700', marginTop: 8 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 10,
-    marginBottom: 10,
-    ...shadow,
-  },
-  cover: { width: 72, height: 72, borderRadius: 14 },
-  coverEmpty: { backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 18, fontWeight: '900', color: colors.navy },
-  cardMeta: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  cardNote: { fontSize: 13, color: colors.navy, marginTop: 2, fontStyle: 'italic' },
-  chevron: { fontSize: 28, color: colors.muted, paddingRight: 6 },
-  emptyText: { color: colors.muted, lineHeight: 20 },
+  root: { flex: 1, backgroundColor: palette.sky },
+  header: { backgroundColor: palette.navy, paddingTop: topInset, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 4, borderColor: palette.ink },
+  title: { textShadowColor: palette.ink, textShadowOffset: { width: 3, height: 3 }, textShadowRadius: 0 },
+  content: { padding: 16, paddingBottom: 48, gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stats: { flexDirection: 'row', gap: 6 },
+  stat: { alignItems: 'center', paddingVertical: 6 },
+  scanBtn: { alignItems: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 8 },
+  notice: { flexDirection: 'row', gap: 10, padding: 12 },
+  progressBox: { padding: 10, gap: 6 },
+  bar: { height: 14, borderWidth: 3, borderColor: palette.ink, backgroundColor: palette.dusk },
+  barFill: { height: '100%', backgroundColor: palette.lime },
+  addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  addBtn: { paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8 },
+  cover: { width: 64, height: 64, borderWidth: 3, borderColor: palette.ink },
+  coverEmpty: { backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' },
+  overlay: { flex: 1, backgroundColor: 'rgba(26,28,44,0.6)', alignItems: 'center', justifyContent: 'center' },
+  progressCard: { padding: 18, alignItems: 'center', gap: 12 },
 });

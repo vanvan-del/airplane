@@ -32,11 +32,11 @@ export function buildMapHtml(pins: MapPin[]): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
-  html,body,#map{margin:0;height:100%;background:#DFF1FF;font-family:-apple-system,"PingFang SC",sans-serif}
+  html,body,#map{margin:0;height:100%;background:#41A6F6;font-family:-apple-system,"PingFang SC",sans-serif}
   .pin{display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);white-space:nowrap}
   .pin .flag{font-size:24px;line-height:24px}
-  .pin .label{background:#FFD25A;color:#1D3557;font-weight:800;font-size:12px;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.2)}
-  .pin .count{background:#FF7A59;color:#fff;border-radius:8px;padding:0 4px;margin-left:3px;font-size:11px}
+  .pin .label{background:#FFCD75;color:#1A1C2C;font-weight:700;font-size:12px;padding:1px 6px;border:2px solid #1A1C2C;box-shadow:3px 3px 0 #1A1C2C}
+  .pin .count{background:#EF7D57;color:#F4F4F4;padding:0 4px;margin-left:3px;font-size:11px}
   #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5B6B82;font-weight:700}
 </style>
 </head><body>

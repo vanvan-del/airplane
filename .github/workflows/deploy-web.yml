@@ -1,0 +1,35 @@
+# 把网页版构建好，发布到 gh-pages 分支（GitHub Pages）
+name: Deploy web
+
+on:
+  push:
+    branches: [main, claude/travel-app]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo export --platform web
+        env:
+          CI: 1
+          EXPO_BASE_URL: /airplane
+      # Jekyll 会忽略下划线开头的 _expo 文件夹，要关掉
+      - run: touch dist/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
