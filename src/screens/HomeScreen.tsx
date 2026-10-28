@@ -24,7 +24,9 @@ export interface TripQuery {
 interface Props {
   initial: TripQuery;
   error: string | null;
+  footprintCount: number;
   onTakeOff: (q: TripQuery) => void;
+  onFootprints: () => void;
 }
 
 export function toDateString(d: Date): string {
@@ -48,7 +50,7 @@ function quickDates() {
   ];
 }
 
-export default function HomeScreen({ initial, error, onTakeOff }: Props) {
+export default function HomeScreen({ initial, error, footprintCount, onTakeOff, onFootprints }: Props) {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [date, setDate] = useState(initial.date);
@@ -77,6 +79,9 @@ export default function HomeScreen({ initial, error, onTakeOff }: Props) {
         <Animated.Text style={[styles.plane, { transform: [{ translateY }, { rotate }] }]}>✈️</Animated.Text>
         <Text style={styles.title}>小飞机去旅行</Text>
         <Text style={styles.subtitle}>输入目的地，小飞机帮你找最省钱的出行方式</Text>
+        <Pressable style={styles.footprintBtn} onPress={onFootprints}>
+          <Text style={styles.footprintText}>🗺️ 我的足迹 · 已点亮 {footprintCount} 城</Text>
+        </Pressable>
 
         <View style={styles.card}>
           <Text style={styles.label}>🏠 从哪出发</Text>
@@ -138,7 +143,17 @@ const styles = StyleSheet.create({
   content: { paddingTop: topInset, paddingHorizontal: 20, paddingBottom: 40 },
   plane: { fontSize: 72, textAlign: 'center', marginTop: 8 },
   title: { fontSize: 32, fontWeight: '900', color: colors.navy, textAlign: 'center', marginTop: 4 },
-  subtitle: { fontSize: 14, color: colors.navy, opacity: 0.75, textAlign: 'center', marginTop: 6, marginBottom: 20 },
+  subtitle: { fontSize: 14, color: colors.navy, opacity: 0.75, textAlign: 'center', marginTop: 6, marginBottom: 14 },
+  footprintBtn: {
+    alignSelf: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginBottom: 18,
+    ...shadow,
+  },
+  footprintText: { fontSize: 15, fontWeight: '800', color: colors.navy },
   card: { backgroundColor: colors.card, borderRadius: 24, padding: 20, ...shadow },
   label: { fontSize: 15, fontWeight: '700', color: colors.navy, marginBottom: 8, marginTop: 4 },
   input: {

@@ -20,6 +20,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "需要访问你的相册，把旅行照片存进去过的地方",
+          "cameraPermission": "需要使用相机，拍下旅行中的记忆"
+        }
+      ]
+    ]
   }
 }

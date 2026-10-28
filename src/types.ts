@@ -30,6 +30,23 @@ export interface Place {
   guide?: CityGuide;
 }
 
+export interface Memory {
+  id: string;
+  /** App 文件夹里的文件名；复制失败时是原图的完整 uri */
+  file: string;
+  addedAt: string;
+}
+
+export interface Footprint {
+  name: string;
+  lat: number;
+  lon: number;
+  /** 去过的日期，YYYY-MM-DD */
+  visits: string[];
+  photos: Memory[];
+  note: string;
+}
+
 export interface WeatherInfo {
   date: string;
   tMax: number;

@@ -47,7 +47,14 @@ function TileButton({ tile, index, onPress }: { tile: Tile; index: number; onPre
   );
 }
 
-export default function ResultScreen({ trip, onBack }: { trip: Trip; onBack: () => void }) {
+interface Props {
+  trip: Trip;
+  visited: boolean;
+  onVisited: () => void;
+  onBack: () => void;
+}
+
+export default function ResultScreen({ trip, visited, onVisited, onBack }: Props) {
   const [open, setOpen] = useState<Tile | null>(null);
   const w = trip.weather;
 
@@ -62,13 +69,18 @@ export default function ResultScreen({ trip, onBack }: { trip: Trip; onBack: () 
         <Text style={styles.meta}>
           {trip.from.name} → {trip.to.name} · {trip.date}
         </Text>
-        {w && (
-          <View style={styles.weatherBadge}>
-            <Text style={styles.weatherText}>
-              {w.emoji} {w.desc} {w.tMin}°~{w.tMax}°C
-            </Text>
-          </View>
-        )}
+        <View style={styles.badges}>
+          {w && (
+            <View style={styles.weatherBadge}>
+              <Text style={styles.weatherText}>
+                {w.emoji} {w.desc} {w.tMin}°~{w.tMax}°C
+              </Text>
+            </View>
+          )}
+          <Pressable style={[styles.weatherBadge, styles.visitBadge]} onPress={onVisited}>
+            <Text style={styles.weatherText}>{visited ? '📷 这里的记忆' : '📍 我去过这里'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.grid}>
@@ -114,9 +126,9 @@ const styles = StyleSheet.create({
   arrived: { fontSize: 16, color: colors.navy, marginTop: 12, opacity: 0.8 },
   city: { fontSize: 40, fontWeight: '900', color: colors.navy },
   meta: { fontSize: 14, color: colors.navy, opacity: 0.75, marginTop: 2 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  visitBadge: { backgroundColor: colors.sun },
   weatherBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
     backgroundColor: colors.card,
     borderRadius: 999,
     paddingHorizontal: 14,
