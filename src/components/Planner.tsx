@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { mapSearch } from '../services/links';
-import { INTEREST_LABELS, makePlan, Pace, PACE_LABELS, Plan } from '../services/planner';
+import { hotPlan, INTEREST_LABELS, makePlan, Pace, PACE_LABELS, Plan } from '../services/planner';
 import { isAbroad } from '../services/geo';
 import { BORDER, palette, px } from '../theme';
 import { Interest } from '../types';
@@ -18,7 +18,7 @@ const SLOT_COLOR = { 上午: palette.yellow, 下午: palette.orange, 晚上: pal
 export default function PlannerSection({ trip }: { trip: Trip }) {
   const guide = trip.to.guide;
   const [interests, setInterests] = useState<Interest[]>(['culture', 'photo']);
-  const [days, setDays] = useState(isAbroad(trip.to) ? 3 : 2);
+  const [days, setDays] = useState(isAbroad(trip.to) ? 4 : 3);
   const [pace, setPace] = useState<Pace>('normal');
   const [plan, setPlan] = useState<Plan | null>(null);
 
@@ -60,8 +60,13 @@ export default function PlannerSection({ trip }: { trip: Trip }) {
           </View>
         </Question>
         <PixelButton bg={palette.orange} contentStyle={styles.go} onPress={() => setPlan(makePlan(guide, { interests, days, pace }))}>
-          <Text style={px(18, palette.white)}>▶ 生成我的攻略</Text>
+          <Text style={px(18, palette.white)}>▶ 按我的喜好生成</Text>
         </PixelButton>
+        {guide.route && (
+          <PixelButton bg={palette.red} contentStyle={styles.go} onPress={() => setPlan(hotPlan(guide, { interests, days, pace }))}>
+            <Text style={px(18, palette.white)}>★ 直接用网上最火的路线</Text>
+          </PixelButton>
+        )}
       </View>
     );
   }
@@ -71,13 +76,25 @@ export default function PlannerSection({ trip }: { trip: Trip }) {
       <Text style={px(12, palette.slate)}>
         {trip.to.name} · {days} 天 · {interests.length ? interests.map((i) => INTEREST_LABELS[i]).join('、') : '什么都想看'} · {PACE_LABELS[pace]}
       </Text>
+      {guide.route && (
+        <View style={styles.chips}>
+          <PixelChip label="按我的喜好" active={plan.mode === 'interest'} onPress={() => setPlan(makePlan(guide, { interests, days, pace }))} />
+          <PixelChip label="★ 热门路线" active={plan.mode === 'hot'} onPress={() => setPlan(hotPlan(guide, { interests, days, pace }))} />
+        </View>
+      )}
+      {plan.mode === 'hot' && (
+        <Text style={px(12, palette.slate)}>按携程、马蜂窝、小红书上最常见的热门行程整理，每天顺路排好；天数比路线多时，剩下的天按你的喜好补上。</Text>
+      )}
       <StoryBox text={guide.intro} />
       {plan.days.map((d) => (
         <PixelBox key={d.day} bg={palette.white} contentStyle={{ padding: 0 }}>
           <View style={styles.dayHead}>
-            <Text style={px(18, palette.white)}>DAY {d.day}</Text>
+            <Text style={px(18, palette.white)}>
+              DAY {d.day}
+              {d.title ? ` · ${d.title}` : ''}
+            </Text>
             <Text style={px(12, palette.cyan)}>
-              {d.areas.join(' → ')} · 约 {d.hours} 小时
+              {d.areas.join(' → ')} · 约 {Math.round(d.hours * 2) / 2} 小时
             </Text>
           </View>
           <View style={{ padding: 10, gap: 12 }}>
@@ -109,7 +126,7 @@ export default function PlannerSection({ trip }: { trip: Trip }) {
         </PixelBox>
       ))}
       {plan.days.length < days && (
-        <Text style={px(12, palette.slate)}>※ 符合条件的景点只够排 {plan.days.length} 天，剩下的时间可以自由逛逛，或者多选几个喜好重新生成。</Text>
+        <Text style={px(12, palette.slate)}>※ 收录的景点只够排 {plan.days.length} 天，剩下的时间可以自由逛逛、补觉或者去周边城市。</Text>
       )}
       {plan.extras.length > 0 && (
         <View style={{ gap: 6 }}>

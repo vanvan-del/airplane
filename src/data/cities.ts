@@ -1,9 +1,18 @@
-import { Place, Region } from '../types';
+import { CityGuide, Place, Region } from '../types';
 import { CHINA_GUIDES } from './guides/china';
 import { EUROPE_GUIDES } from './guides/europe';
+import { CHINA_MORE } from './guides/moreChina';
+import { WORLD_MORE } from './guides/moreWorld';
 import { WORLD_GUIDES } from './guides/world';
 
-const GUIDES = { ...CHINA_GUIDES, ...EUROPE_GUIDES, ...WORLD_GUIDES };
+const MORE = { ...CHINA_MORE, ...WORLD_MORE };
+// 基础攻略 + 补充的景点和热门路线
+const GUIDES: Record<string, CityGuide> = Object.fromEntries(
+  Object.entries({ ...CHINA_GUIDES, ...EUROPE_GUIDES, ...WORLD_GUIDES }).map(([name, g]) => [
+    name,
+    MORE[name] ? { ...g, spots: [...g.spots, ...MORE[name].spots], route: MORE[name].route } : g,
+  ]),
+);
 
 // 内置城市坐标和三字码，没网或者地名解析失败时也能算距离、拼机票链接
 const CITY_BASE: Array<[string, string, number, number]> = [

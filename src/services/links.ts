@@ -19,3 +19,10 @@ export function mapSearch(keyword: string, place: { name: string; en?: string; c
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${keyword} ${place.en ?? place.name}`)}`
     : amapSearch(keyword, place.name);
 }
+
+/** 步行导航到一个坐标（WGS84）：国内用高德，国外用 Google 地图 */
+export function walkTo(lat: number, lon: number, name: string, abroad: boolean) {
+  return abroad
+    ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=walking`
+    : `https://uri.amap.com/navigation?to=${lon},${lat},${encodeURIComponent(name)}&mode=walk&coordinate=wgs84&callnative=1`;
+}

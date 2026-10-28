@@ -1,11 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { PHOTO_SPOTS } from '../data/photoSpots';
 import { outfitAdvice } from '../services/advice';
 import { baiduSearch, mapSearch, xiaohongshuSearch } from '../services/links';
 import { INTEREST_LABELS } from '../services/planner';
 import { bookingLinks, estimateOptions, formatHours } from '../services/transport';
+import { isAbroad } from '../services/geo';
 import { BORDER, palette, px } from '../theme';
 import { Place, Spot, WeatherInfo } from '../types';
 import ExternalLink from './ExternalLink';
+import PhotoSpotCard from './PhotoSpotCard';
 import { PixelBox } from './pixel/PixelBox';
 import PixelIcon from './pixel/PixelIcon';
 import { IconName } from './pixel/icons';
@@ -139,6 +142,7 @@ export function TransportSection({ trip }: { trip: Trip }) {
 export function SpotsSection({ trip, kind }: { trip: Trip; kind: Spot['kind'] }) {
   const city = trip.to.name;
   const spots = trip.to.guide?.spots.filter((s) => s.kind === kind) ?? [];
+  if (kind === 'photo' && PHOTO_SPOTS[city]) return <PhotoSection trip={trip} spots={spots} />;
   if (spots.length === 0) return <SearchFallback place={trip.to} keyword={kind === 'photo' ? '拍照打卡' : '景点'} />;
   return (
     <View>
@@ -152,6 +156,32 @@ export function SpotsSection({ trip, kind }: { trip: Trip; kind: Spot['kind'] })
         url={xiaohongshuSearch(city + (kind === 'photo' ? '拍照机位' : '景点'))}
         color={palette.red}
       />
+    </View>
+  );
+}
+
+// 打卡拍照：先列机位（站哪儿、朝哪拍、几点去、用什么镜头），再列适合拍照的景点
+function PhotoSection({ trip, spots }: { trip: Trip; spots: Spot[] }) {
+  const city = trip.to.name;
+  const list = PHOTO_SPOTS[city];
+  return (
+    <View>
+      <Text style={[px(12), styles.body]}>
+        {city}的 {list.length} 个经典机位：机位图上北下南，相机是你站的位置，星星是要拍的地标，黄色扇形是镜头大概能拍到的范围。
+      </Text>
+      {list.map((s) => (
+        <PhotoSpotCard key={s.name} spot={s} abroad={isAbroad(trip.to)} />
+      ))}
+      <Note>机位坐标是根据公开资料整理的大概位置，误差一般在几十米以内，到了附近以现场为准；部分地点需要预约或有开放时间。</Note>
+      {spots.length > 0 && (
+        <>
+          <Text style={[px(18), styles.subhead]}>更多出片的地方</Text>
+          {spots.map((s) => (
+            <SpotCard key={s.name} spot={s} place={trip.to} />
+          ))}
+        </>
+      )}
+      <LinkButton icon="note" label={`小红书看更多「${city}拍照机位」`} url={xiaohongshuSearch(city + '拍照机位')} color={palette.red} />
     </View>
   );
 }

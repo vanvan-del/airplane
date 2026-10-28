@@ -23,11 +23,19 @@ export interface Food {
   desc: string;
 }
 
+/** 热门路线里的一天：主题和按顺序要去的景点（名字对应 spots 里的景点） */
+export interface RouteDay {
+  title: string;
+  stops: string[];
+}
+
 export interface CityGuide {
   /** 城市的历史和故事简介 */
   intro: string;
   spots: Spot[];
   foods: Food[];
+  /** 网上热门攻略里最常见的按天路线 */
+  route?: RouteDay[];
 }
 
 export type Region = 'china' | 'europe' | 'asia' | 'americas' | 'other';

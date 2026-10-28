@@ -1,4 +1,4 @@
-import { Food, Interest, Spot } from '../../types';
+import { Food, Interest, RouteDay, Spot } from '../../types';
 
 // 用字母简写兴趣标签：c 人文历史 n 自然风景 p 拍照打卡 a 艺术博物馆 f 名人足迹 s 运动户外 y 夜景夜生活
 const TAGS: Record<string, Interest> = { c: 'culture', n: 'nature', p: 'photo', a: 'art', f: 'people', s: 'sport', y: 'night' };
@@ -11,3 +11,12 @@ export function s(name: string, area: string, tags: string, hours: number, ticke
 
 /** 美食：名称、介绍 */
 export const f = (name: string, desc: string): Food => ({ name, desc });
+
+/** 热门路线的一天：主题、按顺序去的景点 */
+export const r = (title: string, ...stops: string[]): RouteDay => ({ title, stops });
+
+/** 补充的景点和热门路线 */
+export interface GuideMore {
+  spots: Spot[];
+  route: RouteDay[];
+}
