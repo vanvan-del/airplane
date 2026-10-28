@@ -18,10 +18,12 @@ interface Props {
   onAdd: (city: string) => Promise<string | null>;
   /** 合并相册扫描出来的足迹 */
   onImport: (found: Footprint[]) => void;
+  onCompanions: () => void;
+  onReplay: () => void;
   onBack: () => void;
 }
 
-export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, onBack }: Props) {
+export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, onCompanions, onReplay, onBack }: Props) {
   const [city, setCity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +109,21 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
         <Text style={[px(12, palette.ink), { textAlign: 'center' }]}>
           {view === 'globe' ? '拖动转地球 · 双指或＋－缩放 · 黄色是去过的国家' : '高德地图，可拖动缩放；点小旗子看回忆'}
         </Text>
+
+        <View style={styles.row}>
+          <PixelButton style={{ flex: 1 }} bg={palette.plum} onPress={onReplay} contentStyle={styles.scanBtn}>
+            <View style={styles.row}>
+              <PixelIcon name="play" scale={2} tint={palette.white} />
+              <Text style={px(12, palette.white)}>旅行回放</Text>
+            </View>
+          </PixelButton>
+          <PixelButton style={{ flex: 1 }} bg={palette.yellow} onPress={onCompanions} contentStyle={styles.scanBtn}>
+            <View style={styles.row}>
+              <PixelIcon name="heart" scale={2} />
+              <Text style={px(12)}>旅行伙伴</Text>
+            </View>
+          </PixelButton>
+        </View>
 
         <PixelButton bg={palette.orange} onPress={scan} contentStyle={styles.scanBtn}>
           <View style={styles.row}>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { COUNTRIES, COUNTRY_NAMES } from '../data/world';
-import { GRID_CELLS, GRID_COUNTRY_IDS, GRID_H, GRID_W } from '../data/worldGrid';
+import { cellAt, gridIndexOf } from '../data/worldMap';
 import { palette, px } from '../theme';
 import { Footprint } from '../types';
 import { PixelBox } from './pixel/PixelBox';
@@ -12,31 +12,6 @@ import PixelIcon from './pixel/PixelIcon';
 
 /** 地球横向切成多少个像素点 */
 const DOTS = 64;
-
-// 把预先算好的世界格子解码成数组：每格记着属于哪个国家（0 是海洋）
-const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-function decode(b64: string): Uint8Array {
-  const clean = b64.replace(/=+$/, '');
-  const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
-  let o = 0;
-  for (let i = 0; i < clean.length; i += 4) {
-    const n =
-      (B64.indexOf(clean[i]) << 18) |
-      (B64.indexOf(clean[i + 1]) << 12) |
-      ((B64.indexOf(clean[i + 2]) & 63) << 6) |
-      (B64.indexOf(clean[i + 3]) & 63);
-    out[o++] = (n >> 16) & 255;
-    if (o < out.length) out[o++] = (n >> 8) & 255;
-    if (o < out.length) out[o++] = n & 255;
-  }
-  return out;
-}
-const CELLS = decode(GRID_CELLS);
-const cellAt = (lon: number, lat: number) => {
-  const col = Math.min(GRID_W - 1, Math.max(0, Math.floor(lon + 180)));
-  const row = Math.min(GRID_H - 1, Math.max(0, Math.floor(90 - lat)));
-  return CELLS[row * GRID_W + col];
-};
 
 const LABELS = COUNTRIES.filter((f) => f.id != null && COUNTRY_NAMES[String(f.id)]).map((f) => ({
   name: COUNTRY_NAMES[String(f.id)],
@@ -77,8 +52,8 @@ export default function GlobeView({ footprints, onOpen }: Props) {
     const set = new Set<number>();
     for (const f of footprints) {
       const c = COUNTRIES.find((x) => geoContains(x as Feature, [f.lon, f.lat]));
-      const idx = c ? GRID_COUNTRY_IDS.indexOf(String(c.id)) : -1;
-      if (idx >= 0) set.add(idx + 1);
+      const idx = c ? gridIndexOf(String(c.id)) : 0;
+      if (idx > 0) set.add(idx);
     }
     return set;
   }, [footprints]);

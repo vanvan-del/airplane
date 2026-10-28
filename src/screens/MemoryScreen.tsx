@@ -3,10 +3,11 @@ import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import PhotoImage from '../components/PhotoImage';
 import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
 import { pixelInput } from '../components/pixel/PixelChip';
+import PixelAvatar from '../components/pixel/PixelAvatar';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { deletePhotoFile, pickFromAlbum, takePhoto } from '../services/footprints';
 import { BORDER, palette, px, topInset } from '../theme';
-import { Footprint, Memory } from '../types';
+import { Companion, Footprint, Memory } from '../types';
 import { toDateString } from './HomeScreen';
 
 const GAP = 6;
@@ -14,17 +15,21 @@ const TILE = Math.floor((Math.min(Dimensions.get('window').width, 600) - 32 - GA
 
 interface Props {
   footprint: Footprint;
+  companions: Companion[];
   onChange: (f: Footprint) => void;
   onRemove: () => void;
   onBack: () => void;
 }
 
-export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: Props) {
+export default function MemoryScreen({ footprint, companions, onChange, onRemove, onBack }: Props) {
   const [note, setNote] = useState(footprint.note);
   const [viewing, setViewing] = useState<Memory | null>(null);
   // 提示和删除确认都直接显示在页面里（网页版不支持系统弹窗）
   const [message, setMessage] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // 正在选同行伙伴的那次旅行
+  const [tripDate, setTripDate] = useState<string | null>(footprint.visits.at(-1) ?? null);
+  const friends = companions.filter((c) => !c.isMe);
   const today = toDateString(new Date());
   // 每次保存都带上正在编辑的文字，避免还没失焦的内容被覆盖
   const update = (patch: Partial<Footprint>) => onChange({ ...footprint, note, ...patch });
@@ -71,10 +76,19 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.visits}>
           {footprint.visits.map((d, i) => (
-            <View key={`${d}-${i}`} style={styles.visitChip}>
+            <Pressable
+              key={`${d}-${i}`}
+              style={[styles.visitChip, tripDate === d && styles.visitOn]}
+              onPress={() => setTripDate(d)}
+              accessibilityLabel={`${d} 这次旅行`}
+            >
               <PixelIcon name="plane" scale={1} />
               <Text style={px(12)}>{d}</Text>
-            </View>
+              {(footprint.withWhom?.[d] ?? []).map((id) => {
+                const c = companions.find((x) => x.id === id);
+                return c ? <PixelAvatar key={id} avatar={c.avatar} scale={1} /> : null;
+              })}
+            </Pressable>
           ))}
           {!footprint.visits.includes(today) && (
             <Pressable onPress={() => update({ visits: [...footprint.visits, today] })} style={[styles.visitChip, styles.visitAdd]}>
@@ -82,6 +96,37 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
             </Pressable>
           )}
         </View>
+
+        {tripDate && (
+          <PixelBox bg={palette.white} contentStyle={styles.whoBox}>
+            <Text style={px(12)}>{tripDate} 这次和谁一起去的？</Text>
+            {friends.length === 0 ? (
+              <Text style={px(12, palette.slate)}>还没有旅行伙伴，在「我的足迹 → 旅行伙伴」里添加朋友的角色。</Text>
+            ) : (
+              <View style={styles.visits}>
+                {friends.map((c) => {
+                  const ids = footprint.withWhom?.[tripDate] ?? [];
+                  const on = ids.includes(c.id);
+                  return (
+                    <Pressable
+                      key={c.id}
+                      style={[styles.who, on && styles.whoOn]}
+                      onPress={() =>
+                        update({
+                          withWhom: { ...(footprint.withWhom ?? {}), [tripDate]: on ? ids.filter((x) => x !== c.id) : [...ids, c.id] },
+                        })
+                      }
+                      accessibilityState={{ selected: on }}
+                    >
+                      <PixelAvatar avatar={c.avatar} scale={2} />
+                      <Text style={px(12, on ? palette.white : palette.ink)}>{c.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </PixelBox>
+        )}
 
         <View style={styles.row}>
           <PixelIcon name="note" scale={2} />
@@ -178,6 +223,10 @@ const styles = StyleSheet.create({
   visits: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   visitChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: palette.white, borderWidth: 2, borderColor: palette.ink, paddingHorizontal: 8, paddingVertical: 2 },
   visitAdd: { backgroundColor: palette.yellow },
+  visitOn: { backgroundColor: palette.cyan },
+  whoBox: { padding: 10, gap: 8 },
+  who: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 2, borderColor: palette.ink, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: palette.white },
+  whoOn: { backgroundColor: palette.blue },
   note: { minHeight: 90, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', gap: 10 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12 },

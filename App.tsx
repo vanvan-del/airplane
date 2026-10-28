@@ -4,18 +4,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import FlightScene from './src/components/FlightScene';
 import { Trip } from './src/components/Sections';
+import CompanionsScreen from './src/screens/CompanionsScreen';
 import FootprintsScreen from './src/screens/FootprintsScreen';
 import HomeScreen, { toDateString, TripQuery } from './src/screens/HomeScreen';
 import MemoryScreen from './src/screens/MemoryScreen';
+import ReplayScreen from './src/screens/ReplayScreen';
 import ResultScreen from './src/screens/ResultScreen';
 import { loadFootprints, mergeFootprints, newFootprint, saveFootprints } from './src/services/footprints';
 import { distanceKm, resolvePlace } from './src/services/geo';
+import { acceptInvite, loadCompanions, readInviteCode, saveCompanions } from './src/services/companions';
 import { getWeather } from './src/services/weather';
 import { wikiGuide } from './src/services/wikiGuide';
 import { FONT, palette } from './src/theme';
-import { Footprint, Place } from './src/types';
+import { Companion, Footprint, Place } from './src/types';
 
-type Stage = 'home' | 'flying' | 'result' | 'footprints' | 'memory';
+type Stage = 'home' | 'flying' | 'result' | 'footprints' | 'memory' | 'companions' | 'replay';
 
 async function planTrip(q: TripQuery): Promise<Trip> {
   const [from, to] = await Promise.all([resolvePlace(q.from), resolvePlace(q.to)]);
@@ -41,10 +44,41 @@ export default function App() {
   const [memoryOf, setMemoryOf] = useState<string | null>(null);
   // 从相册页返回时回到哪一页
   const [memoryBack, setMemoryBack] = useState<Stage>('footprints');
+  const [companions, setCompanions] = useState<Companion[]>([]);
+  const [replayWith, setReplayWith] = useState<string | undefined>();
+  const [replayBack, setReplayBack] = useState<Stage>('footprints');
 
   useEffect(() => {
-    loadFootprints().then(setFootprints);
+    Promise.all([loadFootprints(), loadCompanions()]).then(([fps, comps]) => {
+      setFootprints(fps);
+      setCompanions(comps);
+      saveCompanions(comps).catch(() => {});
+      // 网页版通过邀请链接打开：#invite=FEIJI1.xxx
+      if (typeof window !== 'undefined' && window.location?.hash?.includes('invite=')) {
+        const data = readInviteCode(window.location.hash);
+        if (data) {
+          const merged = acceptInvite(data, comps, fps);
+          setFootprints(merged.footprints);
+          setCompanions(merged.companions);
+          saveFootprints(merged.footprints).catch(() => {});
+          saveCompanions(merged.companions).catch(() => {});
+          window.history.replaceState?.(null, '', window.location.pathname);
+          setStage('companions');
+        }
+      }
+    });
   }, []);
+
+  const updateCompanions = (next: Companion[]) => {
+    setCompanions(next);
+    saveCompanions(next).catch(() => {});
+  };
+
+  const openReplay = (withId: string | undefined, back: Stage) => {
+    setReplayWith(withId);
+    setReplayBack(back);
+    setStage('replay');
+  };
 
   const updateFootprints = (fn: (prev: Footprint[]) => Footprint[]) =>
     setFootprints((prev) => {
@@ -128,6 +162,8 @@ export default function App() {
             return null;
           }}
           onImport={(found) => updateFootprints((prev) => mergeFootprints(prev, found))}
+          onCompanions={() => setStage('companions')}
+          onReplay={() => openReplay(undefined, 'footprints')}
           onBack={() => setStage('home')}
         />
       )}
@@ -135,6 +171,7 @@ export default function App() {
         <MemoryScreen
           key={memory.name}
           footprint={memory}
+          companions={companions}
           onChange={(f) => updateFootprints((prev) => prev.map((p) => (p.name === f.name ? f : p)))}
           onRemove={() => {
             updateFootprints((prev) => prev.filter((p) => p.name !== memory.name));
@@ -142,6 +179,27 @@ export default function App() {
           }}
           onBack={() => setStage(memoryBack)}
         />
+      )}
+      {stage === 'companions' && (
+        <CompanionsScreen
+          companions={companions}
+          footprints={footprints}
+          onChange={updateCompanions}
+          onAcceptInvite={(code) => {
+            const data = readInviteCode(code);
+            if (!data) return '邀请码不对，请检查有没有复制完整';
+            if (companions.some((c) => c.isMe && c.id === data.from.id)) return '这是你自己的邀请码哦，发给朋友吧';
+            const merged = acceptInvite(data, companions, footprints);
+            updateCompanions(merged.companions);
+            updateFootprints(() => merged.footprints);
+            return null;
+          }}
+          onReplay={(id) => openReplay(id, 'companions')}
+          onBack={() => setStage('footprints')}
+        />
+      )}
+      {stage === 'replay' && (
+        <ReplayScreen footprints={footprints} companions={companions} withId={replayWith} onBack={() => setStage(replayBack)} />
       )}
     </>
   );

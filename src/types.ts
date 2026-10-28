@@ -55,6 +55,23 @@ export interface Memory {
   addedAt: string;
 }
 
+/** 像素小人的外观 */
+export interface Avatar {
+  skin: string;
+  hair: 'short' | 'long' | 'bun' | 'spiky' | 'cap' | 'bald';
+  hairColor: string;
+  outfit: string;
+  extra: 'none' | 'glasses' | 'scarf' | 'bag';
+}
+
+/** 旅行伙伴（包括自己） */
+export interface Companion {
+  id: string;
+  name: string;
+  avatar: Avatar;
+  isMe?: boolean;
+}
+
 export interface Footprint {
   name: string;
   country?: string;
@@ -62,6 +79,8 @@ export interface Footprint {
   lon: number;
   /** 去过的日期，YYYY-MM-DD */
   visits: string[];
+  /** 每次旅行（按日期）和谁一起去的，值是伙伴 id */
+  withWhom?: Record<string, string[]>;
   photos: Memory[];
   note: string;
 }
