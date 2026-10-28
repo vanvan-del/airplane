@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import FootprintMap from '../components/FootprintMap';
+import GlobeView from '../components/GlobeView';
 import { CITIES } from '../data/cities';
 import { photoUri } from '../services/footprints';
 import { ScanProgress, scanAlbum } from '../services/photoScan';
@@ -21,6 +22,7 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
   const [city, setCity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'globe' | 'map'>('globe');
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const cancelled = useRef(false);
   const photoCount = footprints.reduce((n, f) => n + f.photos.length, 0);
@@ -68,7 +70,21 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
           <Stat value={photoCount} label="记忆照片" />
         </View>
 
-        <FootprintMap footprints={footprints} onOpen={onOpen} />
+        <View style={styles.tabs}>
+          {(['globe', 'map'] as const).map((v) => (
+            <Pressable key={v} style={[styles.tab, view === v && styles.tabActive]} onPress={() => setView(v)}>
+              <Text style={[styles.tabText, view === v && styles.tabTextActive]}>{v === 'globe' ? '🌍 地球' : '🗺️ 地图'}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {view === 'globe' ? (
+          <GlobeView footprints={footprints} onOpen={onOpen} />
+        ) : (
+          <FootprintMap footprints={footprints} onOpen={onOpen} />
+        )}
+        <Text style={styles.mapHint}>
+          {view === 'globe' ? '拖动转地球，双指或 ＋－ 缩放；黄色是去过的国家' : '高德地图，可拖动缩放；点小旗子看回忆'}
+        </Text>
 
         <Pressable style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.85 }]} onPress={scan}>
           <Text style={styles.scanText}>📸 扫描相册，自动点亮去过的地方</Text>
@@ -153,6 +169,12 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.card, borderRadius: 18, paddingVertical: 12, alignItems: 'center', ...shadow },
   statValue: { fontSize: 26, fontWeight: '900', color: colors.coral },
   statLabel: { fontSize: 12, color: colors.muted, fontWeight: '700', marginTop: 2 },
+  tabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.card },
+  tabActive: { backgroundColor: colors.navy },
+  tabText: { fontWeight: '800', color: colors.navy },
+  tabTextActive: { color: '#fff' },
+  mapHint: { textAlign: 'center', color: colors.muted, fontSize: 12, marginTop: 8 },
   scanBtn: { backgroundColor: colors.coral, borderRadius: 18, padding: 14, marginTop: 14, alignItems: 'center', ...shadow },
   scanText: { color: '#fff', fontSize: 16, fontWeight: '900' },
   scanSub: { color: '#fff', fontSize: 12, opacity: 0.9, marginTop: 4 },

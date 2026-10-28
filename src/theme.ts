@@ -12,6 +12,8 @@ export const colors = {
   card: '#FFFFFF',
   paper: '#F4FAFF',
   line: '#DCE9F5',
+  ocean: '#BFE3FF',
+  land: '#9ED8B0',
 };
 
 export const topInset = Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight ?? 24) + 12;
