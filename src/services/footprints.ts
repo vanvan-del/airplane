@@ -3,7 +3,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import { Footprint, Memory, Place } from '../types';
-import { deletePhoto, isIdbPhoto, savePhoto } from './webPhotos';
+import { deletePhoto, isIdbPhoto, loadPhotoUrl, savePhoto } from './webPhotos';
 
 const STORAGE_KEY = 'footprints:v1';
 const PHOTO_DIR = 'memories';
@@ -112,4 +112,9 @@ export function mergeFootprints(existing: Footprint[], found: Footprint[]): Foot
     };
   }
   return result;
+}
+
+/** 拿到照片能直接显示的地址（网页版存在浏览器里的照片要先取出来） */
+export async function resolvePhotoUri(m: Memory): Promise<string> {
+  return isIdbPhoto(m.file) ? loadPhotoUrl(m.file) : photoUri(m);
 }

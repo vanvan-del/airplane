@@ -190,7 +190,7 @@ export default function CompanionsScreen({ companions, footprints, onChange, onA
   );
 }
 
-function AvatarEditor({
+export function AvatarEditor({
   companion,
   onSave,
   onCancel,

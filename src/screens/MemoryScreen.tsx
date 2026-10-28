@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import PhotoImage from '../components/PhotoImage';
 import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
-import { pixelInput } from '../components/pixel/PixelChip';
+import PixelChip, { pixelInput } from '../components/pixel/PixelChip';
+import PixelArtView from '../components/pixel/PixelArtView';
 import PixelAvatar from '../components/pixel/PixelAvatar';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { deletePhotoFile, pickFromAlbum, takePhoto } from '../services/footprints';
+import { pixelatePhoto } from '../services/pixelPhoto';
 import { BORDER, palette, px, topInset } from '../theme';
 import { Companion, Footprint, Memory } from '../types';
 import { toDateString } from './HomeScreen';
@@ -27,6 +29,9 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
   // 提示和删除确认都直接显示在页面里（网页版不支持系统弹窗）
   const [message, setMessage] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // 照片默认显示像素风版本，可以切回原图
+  const [showPixel, setShowPixel] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
   // 正在选同行伙伴的那次旅行
   const [tripDate, setTripDate] = useState<string | null>(footprint.visits.at(-1) ?? null);
   const friends = companions.filter((c) => !c.isMe);
@@ -40,7 +45,33 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
       setMessage('没有相机权限：请在系统设置里允许「小飞机去旅行」使用相机');
       return;
     }
-    if (added.length > 0) update({ photos: [...added, ...footprint.photos] });
+    if (added.length > 0) update({ photos: [...(await withPixels(added)), ...footprint.photos] });
+  };
+
+  // 逐张转成像素画；失败的保留原图
+  const withPixels = async (list: Memory[]) => {
+    const out: Memory[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      if (m.pixel) {
+        out.push(m);
+        continue;
+      }
+      setBusy(`正在变成像素风 ${i + 1} / ${list.length}`);
+      try {
+        out.push({ ...m, pixel: await pixelatePhoto(m) });
+      } catch {
+        out.push(m);
+      }
+    }
+    setBusy(null);
+    return out;
+  };
+
+  const pixelateAll = async () => {
+    const photos = await withPixels(footprint.photos);
+    update({ photos });
+    setViewing((v) => (v ? (photos.find((p) => p.id === v.id) ?? v) : v));
   };
 
   const removePhoto = (m: Memory) => {
@@ -144,8 +175,18 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
 
         <View style={styles.row}>
           <PixelIcon name="photo" scale={2} />
-          <Text style={px(18)}>照片 × {footprint.photos.length}</Text>
+          <Text style={[px(18), { flex: 1 }]}>照片 × {footprint.photos.length}</Text>
+          {footprint.photos.length > 0 && (
+            <PixelChip label={showPixel ? '像素风' : '原图'} active={showPixel} onPress={() => setShowPixel((x) => !x)} />
+          )}
         </View>
+        {busy && <Text style={px(12, palette.plum)}>{busy}…</Text>}
+        {footprint.photos.some((p) => !p.pixel) && !busy && (
+          <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={pixelateAll}>
+            <PixelIcon name="star" scale={2} />
+            <Text style={px(12, palette.white)}>把照片全部变成像素风</Text>
+          </PixelButton>
+        )}
         {message && <Text style={px(12, palette.red)}>！{message}</Text>}
         <View style={styles.actions}>
           <PixelButton style={{ flex: 1 }} bg={palette.blue} contentStyle={styles.actionBtn} onPress={() => addPhotos('album')}>
@@ -161,7 +202,14 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
         <View style={styles.grid}>
           {footprint.photos.map((m) => (
             <Pressable key={m.id} onPress={() => setViewing(m)} style={styles.photoFrame}>
-              <PhotoImage memory={m} style={styles.photo} />
+              {showPixel && m.pixel ? (
+                <View style={[styles.photo, styles.pixelTile]}>
+                  {/* 横图按高度铺满，裁掉两边，缩略图不留空 */}
+                  <PixelArtView art={m.pixel} width={(TILE - BORDER * 2) * Math.max(1, m.pixel.w / m.pixel.h)} />
+                </View>
+              ) : (
+                <PhotoImage memory={m} style={styles.photo} />
+              )}
             </Pressable>
           ))}
         </View>
@@ -195,11 +243,24 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
         <View style={styles.viewer}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setViewing(null)} />
           {viewing && (
-            <View style={styles.fullFrame}>
-              <PhotoImage memory={viewing} style={styles.full} resizeMode="contain" />
+            <View style={[styles.fullFrame, showPixel && viewing.pixel ? styles.pixelFull : null]}>
+              {showPixel && viewing.pixel ? (
+                <PixelArtView art={viewing.pixel} width={Math.min(Dimensions.get('window').width - 40, 560)} />
+              ) : (
+                <PhotoImage memory={viewing} style={styles.full} resizeMode="contain" />
+              )}
             </View>
           )}
           <View style={styles.viewerBar}>
+            {viewing?.pixel ? (
+              <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={() => setShowPixel((x) => !x)}>
+                <Text style={px(12, palette.white)}>{showPixel ? '看原图' : '看像素风'}</Text>
+              </PixelButton>
+            ) : (
+              <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={pixelateAll}>
+                <Text style={px(12, palette.white)}>变像素风</Text>
+              </PixelButton>
+            )}
             <PixelButton bg={palette.red} contentStyle={styles.actionBtn} onPress={() => viewing && removePhoto(viewing)}>
               <Text style={px(12, palette.white)}>删除</Text>
             </PixelButton>
@@ -232,6 +293,8 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   photoFrame: { borderWidth: BORDER, borderColor: palette.ink, backgroundColor: palette.white },
+  pixelTile: { overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  pixelFull: { height: undefined, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.ink },
   photo: { width: TILE - BORDER * 2, height: TILE - BORDER * 2, backgroundColor: palette.grey },
   empty: { alignItems: 'center', gap: 8, padding: 18 },
   confirm: { padding: 12, gap: 12 },

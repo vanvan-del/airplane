@@ -10,6 +10,8 @@ import HomeScreen, { toDateString, TripQuery } from './src/screens/HomeScreen';
 import MemoryScreen from './src/screens/MemoryScreen';
 import ReplayScreen from './src/screens/ReplayScreen';
 import ResultScreen from './src/screens/ResultScreen';
+import WelcomeScreen from './src/screens/WelcomeScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadFootprints, mergeFootprints, newFootprint, saveFootprints } from './src/services/footprints';
 import { distanceKm, resolvePlace } from './src/services/geo';
 import { acceptInvite, loadCompanions, readInviteCode, saveCompanions } from './src/services/companions';
@@ -18,7 +20,7 @@ import { wikiGuide } from './src/services/wikiGuide';
 import { FONT, palette } from './src/theme';
 import { Companion, Footprint, Place } from './src/types';
 
-type Stage = 'home' | 'flying' | 'result' | 'footprints' | 'memory' | 'companions' | 'replay';
+type Stage = 'welcome' | 'home' | 'flying' | 'result' | 'footprints' | 'memory' | 'companions' | 'replay';
 
 async function planTrip(q: TripQuery): Promise<Trip> {
   const [from, to] = await Promise.all([resolvePlace(q.from), resolvePlace(q.to)]);
@@ -53,6 +55,12 @@ export default function App() {
       setFootprints(fps);
       setCompanions(comps);
       saveCompanions(comps).catch(() => {});
+      // 第一次打开先看欢迎页
+      AsyncStorage.getItem('welcomed:v1')
+        .then((v) => {
+          if (!v) setStage((s) => (s === 'home' ? 'welcome' : s));
+        })
+        .catch(() => {});
       // 网页版通过邀请链接打开：#invite=FEIJI1.xxx
       if (typeof window !== 'undefined' && window.location?.hash?.includes('invite=')) {
         const data = readInviteCode(window.location.hash);
@@ -164,6 +172,11 @@ export default function App() {
           onImport={(found) => updateFootprints((prev) => mergeFootprints(prev, found))}
           onCompanions={() => setStage('companions')}
           onReplay={() => openReplay(undefined, 'footprints')}
+          companions={companions}
+          onRestore={(data) => {
+            updateCompanions(data.companions);
+            updateFootprints(() => data.footprints);
+          }}
           onBack={() => setStage('home')}
         />
       )}
@@ -200,6 +213,16 @@ export default function App() {
       )}
       {stage === 'replay' && (
         <ReplayScreen footprints={footprints} companions={companions} withId={replayWith} onBack={() => setStage(replayBack)} />
+      )}
+      {stage === 'welcome' && companions.length > 0 && (
+        <WelcomeScreen
+          me={companions.find((c) => c.isMe) ?? companions[0]}
+          onDone={(me) => {
+            if (me) updateCompanions(companions.map((c) => (c.id === me.id ? me : c)));
+            AsyncStorage.setItem('welcomed:v1', '1').catch(() => {});
+            setStage('home');
+          }}
+        />
       )}
     </>
   );

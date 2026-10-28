@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import BackupBox from '../components/BackupBox';
 import FootprintMap from '../components/FootprintMap';
 import GlobeView from '../components/GlobeView';
 import { CITIES } from '../data/cities';
@@ -9,7 +10,7 @@ import PixelChip, { pixelInput } from '../components/pixel/PixelChip';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { ScanProgress, scanAlbum } from '../services/photoScan';
 import { palette, px, topInset } from '../theme';
-import { Footprint } from '../types';
+import { Companion, Footprint } from '../types';
 
 interface Props {
   footprints: Footprint[];
@@ -20,10 +21,12 @@ interface Props {
   onImport: (found: Footprint[]) => void;
   onCompanions: () => void;
   onReplay: () => void;
+  companions: Companion[];
+  onRestore: (data: { footprints: Footprint[]; companions: Companion[] }) => void;
   onBack: () => void;
 }
 
-export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, onCompanions, onReplay, onBack }: Props) {
+export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, onCompanions, onReplay, companions, onRestore, onBack }: Props) {
   const [city, setCity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,6 +212,8 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
         {sorted.length === 0 && (
           <Text style={px(12, palette.ink)}>在目的地页面点「我去过这里」，或者在上面补录城市。</Text>
         )}
+
+        <BackupBox footprints={footprints} companions={companions} onRestore={onRestore} />
       </ScrollView>
 
       <Modal visible={progress != null} transparent animationType="fade">

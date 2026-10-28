@@ -46,6 +46,14 @@ export interface Place {
   guide?: CityGuide;
 }
 
+/** 照片转成的像素画：每行一串字符，每个字符对应 colors 里的一种颜色 */
+export interface PixelArt {
+  w: number;
+  h: number;
+  rows: string[];
+  colors: Record<string, string>;
+}
+
 export interface Memory {
   id: string;
   /** App 文件夹里的文件名；复制失败时是原图的完整 uri */
@@ -53,6 +61,8 @@ export interface Memory {
   /** 从相册自动识别导入的照片，记下相册里的 id，避免重复导入 */
   assetId?: string;
   addedAt: string;
+  /** 像素风版本 */
+  pixel?: PixelArt;
 }
 
 /** 像素小人的外观 */

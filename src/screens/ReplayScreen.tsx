@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
+import PhotoImage from '../components/PhotoImage';
+import PixelArtView from '../components/pixel/PixelArtView';
 import PixelAvatar from '../components/pixel/PixelAvatar';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { COUNTRIES } from '../data/world';
@@ -235,6 +237,25 @@ export default function ReplayScreen({
                 <PixelIcon name="plane" scale={3} />
               </View>
             )}
+            {!plane && (seg.phase === 'talk' || seg.phase === 'hold') && !done && current.place.photos.length > 0 && (
+              // 落地后弹出这一站的照片，像一张拍立得
+              <View style={[styles.polaroid, { width: Math.round(mapW * 0.36) }]} pointerEvents="none">
+                {(() => {
+                  const photo = current.place.photos.find((m) => m.pixel) ?? current.place.photos[0];
+                  const w = Math.round(mapW * 0.36) - 12;
+                  return photo.pixel ? (
+                    <View style={{ width: w, height: w, overflow: 'hidden', justifyContent: 'center' }}>
+                      <PixelArtView art={photo.pixel} width={w} />
+                    </View>
+                  ) : (
+                    <PhotoImage memory={photo} style={{ width: w, height: w }} />
+                  );
+                })()}
+                <Text style={[px(12), { textAlign: 'center' }]} numberOfLines={1}>
+                  {current.place.name}
+                </Text>
+              </View>
+            )}
             <Text style={[px(12, palette.cyan), styles.hud]}>
               STAGE {Math.min(seg.stop + 1, stops.length)}/{stops.length}
             </Text>
@@ -312,6 +333,17 @@ const styles = StyleSheet.create({
   flagLabel: { backgroundColor: palette.red, borderWidth: 2, borderColor: palette.ink, paddingHorizontal: 3, marginLeft: -2 },
   party: { position: 'absolute', flexDirection: 'row', gap: 2 },
   plane: { position: 'absolute' },
+  polaroid: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    backgroundColor: palette.white,
+    borderWidth: BORDER,
+    borderColor: palette.ink,
+    padding: 3,
+    paddingBottom: 0,
+    transform: [{ rotate: '3deg' }],
+  },
   hud: { position: 'absolute', left: 6, top: 4 },
   dialog: { padding: 12, gap: 6, borderColor: palette.white, borderWidth: BORDER },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 10 },
