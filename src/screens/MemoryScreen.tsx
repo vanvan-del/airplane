@@ -7,6 +7,7 @@ import PixelArtView from '../components/pixel/PixelArtView';
 import PixelAvatar from '../components/pixel/PixelAvatar';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { deletePhotoFile, pickFromAlbum, takePhoto } from '../services/footprints';
+import { PIXEL_STYLE_LABELS, PixelStyle } from '../services/pixelate';
 import { pixelatePhoto } from '../services/pixelPhoto';
 import { BORDER, palette, px, topInset } from '../theme';
 import { Companion, Footprint, Memory } from '../types';
@@ -32,6 +33,9 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
   // 照片默认显示像素风版本，可以切回原图
   const [showPixel, setShowPixel] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [style, setStyle] = useState<PixelStyle>(footprint.photos.find((p) => p.pixel?.style)?.pixel?.style ?? 'clear');
+  // 还没转过、或者风格和现在选的不一样（包括旧算法生成的）的照片
+  const needsPixel = (m: Memory, st: PixelStyle) => !m.pixel || (m.pixel.style ?? 'old') !== st;
   // 正在选同行伙伴的那次旅行
   const [tripDate, setTripDate] = useState<string | null>(footprint.visits.at(-1) ?? null);
   const friends = companions.filter((c) => !c.isMe);
@@ -49,17 +53,17 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
   };
 
   // 逐张转成像素画；失败的保留原图
-  const withPixels = async (list: Memory[]) => {
+  const withPixels = async (list: Memory[], st: PixelStyle = style) => {
     const out: Memory[] = [];
     for (let i = 0; i < list.length; i++) {
       const m = list[i];
-      if (m.pixel) {
+      if (!needsPixel(m, st)) {
         out.push(m);
         continue;
       }
       setBusy(`正在变成像素风 ${i + 1} / ${list.length}`);
       try {
-        out.push({ ...m, pixel: await pixelatePhoto(m) });
+        out.push({ ...m, pixel: await pixelatePhoto(m, st) });
       } catch {
         out.push(m);
       }
@@ -68,8 +72,8 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
     return out;
   };
 
-  const pixelateAll = async () => {
-    const photos = await withPixels(footprint.photos);
+  const pixelateAll = async (st: PixelStyle = style) => {
+    const photos = await withPixels(footprint.photos, st);
     update({ photos });
     setViewing((v) => (v ? (photos.find((p) => p.id === v.id) ?? v) : v));
   };
@@ -181,10 +185,28 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
           )}
         </View>
         {busy && <Text style={px(12, palette.plum)}>{busy}…</Text>}
-        {footprint.photos.some((p) => !p.pixel) && !busy && (
-          <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={pixelateAll}>
+        {footprint.photos.length > 0 && showPixel && (
+          <View style={styles.row}>
+            <Text style={px(12)}>像素风格：</Text>
+            {(Object.keys(PIXEL_STYLE_LABELS) as PixelStyle[]).map((st) => (
+              <PixelChip
+                key={st}
+                label={PIXEL_STYLE_LABELS[st]}
+                active={style === st}
+                onPress={() => {
+                  setStyle(st);
+                  if (!busy) pixelateAll(st);
+                }}
+              />
+            ))}
+          </View>
+        )}
+        {footprint.photos.some((p) => needsPixel(p, style)) && !busy && (
+          <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={() => pixelateAll()}>
             <PixelIcon name="star" scale={2} />
-            <Text style={px(12, palette.white)}>把照片全部变成像素风</Text>
+            <Text style={px(12, palette.white)}>
+              {footprint.photos.some((p) => p.pixel) ? '用新效果重新生成像素照片' : '把照片全部变成像素风'}
+            </Text>
           </PixelButton>
         )}
         {message && <Text style={px(12, palette.red)}>！{message}</Text>}
@@ -257,7 +279,7 @@ export default function MemoryScreen({ footprint, companions, onChange, onRemove
                 <Text style={px(12, palette.white)}>{showPixel ? '看原图' : '看像素风'}</Text>
               </PixelButton>
             ) : (
-              <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={pixelateAll}>
+              <PixelButton bg={palette.plum} contentStyle={styles.actionBtn} onPress={() => pixelateAll()}>
                 <Text style={px(12, palette.white)}>变像素风</Text>
               </PixelButton>
             )}

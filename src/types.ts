@@ -52,6 +52,8 @@ export interface PixelArt {
   h: number;
   rows: string[];
   colors: Record<string, string>;
+  /** 生成时用的风格；旧版本没有这个字段 */
+  style?: 'clear' | 'retro';
 }
 
 export interface Memory {
