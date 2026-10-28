@@ -354,7 +354,10 @@ export const CITIES: Place[] = CITY_BASE.map(([name, code, lat, lon]) => ({
 export const HOT_DESTINATIONS = Object.keys(GUIDES);
 
 export function normalizeCityName(input: string): string {
-  return input.trim().replace(/(市|省|自治区|特别行政区)$/, '');
+  return input
+    .trim()
+    .replace(/(白族|彝族|藏族|苗族|土家族|侗族|壮族|傣族|景颇族|哈尼族|羌族|回族|朝鲜族|布依族|蒙古族|哈萨克|傈僳族|黎族|族)+自治(州|县)$/, '')
+    .replace(/(市|省|自治区|特别行政区|地区|盟)$/, '');
 }
 
 export function findBuiltInCity(input: string): Place | undefined {

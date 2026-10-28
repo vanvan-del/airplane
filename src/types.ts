@@ -27,6 +27,7 @@ export interface Place {
   lon: number;
   /** 城市三字码，用于拼携程机票链接 */
   code?: string;
+  country?: string;
   guide?: CityGuide;
 }
 
@@ -34,11 +35,14 @@ export interface Memory {
   id: string;
   /** App 文件夹里的文件名；复制失败时是原图的完整 uri */
   file: string;
+  /** 从相册自动识别导入的照片，记下相册里的 id，避免重复导入 */
+  assetId?: string;
   addedAt: string;
 }
 
 export interface Footprint {
   name: string;
+  country?: string;
   lat: number;
   lon: number;
   /** 去过的日期，YYYY-MM-DD */

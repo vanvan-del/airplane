@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import FootprintMap from '../components/FootprintMap';
 import { CITIES } from '../data/cities';
 import { photoUri } from '../services/footprints';
+import { ScanProgress, scanAlbum } from '../services/photoScan';
 import { colors, shadow, topInset } from '../theme';
 import { Footprint } from '../types';
 
@@ -11,14 +12,36 @@ interface Props {
   onOpen: (name: string) => void;
   /** 手动补录一个去过的城市，失败时返回错误提示 */
   onAdd: (city: string) => Promise<string | null>;
+  /** 合并相册扫描出来的足迹 */
+  onImport: (found: Footprint[]) => void;
   onBack: () => void;
 }
 
-export default function FootprintsScreen({ footprints, onOpen, onAdd, onBack }: Props) {
+export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, onBack }: Props) {
   const [city, setCity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ScanProgress | null>(null);
+  const cancelled = useRef(false);
   const photoCount = footprints.reduce((n, f) => n + f.photos.length, 0);
+  const countries = new Set(footprints.map((f) => f.country ?? '中国'));
+
+  const scan = async () => {
+    cancelled.current = false;
+    setProgress({ stage: 'reading', done: 0, total: 0 });
+    const result = await scanAlbum(setProgress, () => cancelled.current);
+    setProgress(null);
+    if (!result.ok) {
+      if (!cancelled.current) Alert.alert('没能扫描相册', result.reason);
+      return;
+    }
+    onImport(result.footprints);
+    Alert.alert(
+      '扫描完成 🎉',
+      `看了 ${result.scanned} 张照片，其中 ${result.located} 张带拍摄地点，识别出 ${result.footprints.length} 个城市：\n` +
+        (result.footprints.map((f) => f.name).join('、') || '（没有找到）'),
+    );
+  };
   const sorted = [...footprints].sort((a, b) => (b.visits.at(-1) ?? '').localeCompare(a.visits.at(-1) ?? ''));
 
   const add = async () => {
@@ -39,12 +62,18 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onBack }: 
         <Text style={styles.title}>🗺️ 我的足迹</Text>
 
         <View style={styles.stats}>
+          <Stat value={countries.size} label="国家/地区" />
           <Stat value={footprints.length} label="点亮城市" />
           <Stat value={footprints.reduce((n, f) => n + f.visits.length, 0)} label="旅行次数" />
           <Stat value={photoCount} label="记忆照片" />
         </View>
 
         <FootprintMap footprints={footprints} onOpen={onOpen} />
+
+        <Pressable style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.85 }]} onPress={scan}>
+          <Text style={styles.scanText}>📸 扫描相册，自动点亮去过的地方</Text>
+          <Text style={styles.scanSub}>根据照片的拍摄地点识别城市，照片自动存进对应的记忆</Text>
+        </Pressable>
         <Text style={styles.progress}>
           已点亮 {footprints.filter((f) => CITIES.some((c) => c.name === f.name)).length} / {CITIES.length} 个热门城市
         </Text>
@@ -85,6 +114,23 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onBack }: 
         ))}
         {sorted.length === 0 && <Text style={styles.emptyText}>在目的地页面点「📍 我去过这里」，或者在上面补录城市。</Text>}
       </ScrollView>
+
+      <Modal visible={progress != null} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.progressCard}>
+            <Text style={{ fontSize: 44 }}>✈️</Text>
+            <Text style={styles.progressTitle}>
+              {progress?.stage === 'reading' && `正在读取相册… ${progress.done} 张`}
+              {progress?.stage === 'locating' && `正在识别拍摄地点 ${progress.done} / ${progress.total}`}
+              {progress?.stage === 'saving' && `正在识别城市 ${progress.done} / ${progress.total}`}
+            </Text>
+            <ActivityIndicator color={colors.coral} style={{ marginVertical: 12 }} />
+            <Pressable onPress={() => (cancelled.current = true)}>
+              <Text style={styles.cancel}>取消</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -107,6 +153,13 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.card, borderRadius: 18, paddingVertical: 12, alignItems: 'center', ...shadow },
   statValue: { fontSize: 26, fontWeight: '900', color: colors.coral },
   statLabel: { fontSize: 12, color: colors.muted, fontWeight: '700', marginTop: 2 },
+  scanBtn: { backgroundColor: colors.coral, borderRadius: 18, padding: 14, marginTop: 14, alignItems: 'center', ...shadow },
+  scanText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  scanSub: { color: '#fff', fontSize: 12, opacity: 0.9, marginTop: 4 },
+  overlay: { flex: 1, backgroundColor: 'rgba(29,53,87,0.45)', alignItems: 'center', justifyContent: 'center' },
+  progressCard: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '80%', alignItems: 'center' },
+  progressTitle: { fontSize: 16, fontWeight: '800', color: colors.navy, textAlign: 'center', marginTop: 8 },
+  cancel: { color: colors.muted, fontWeight: '700', padding: 6 },
   progress: { textAlign: 'center', color: colors.muted, fontWeight: '700', marginTop: 10 },
   section: { fontSize: 18, fontWeight: '900', color: colors.navy, marginTop: 22, marginBottom: 10 },
   addRow: { flexDirection: 'row', gap: 10 },

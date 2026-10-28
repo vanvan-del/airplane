@@ -8,6 +8,7 @@ import MemoryScreen from './src/screens/MemoryScreen';
 import ResultScreen from './src/screens/ResultScreen';
 import { loadFootprints, newFootprint, saveFootprints } from './src/services/footprints';
 import { distanceKm, resolvePlace } from './src/services/geo';
+import { mergeFootprints } from './src/services/photoScan';
 import { getWeather } from './src/services/weather';
 import { Footprint, Place } from './src/types';
 
@@ -114,6 +115,7 @@ export default function App() {
             markVisited(place, toDateString(new Date()));
             return null;
           }}
+          onImport={(found) => updateFootprints((prev) => mergeFootprints(prev, found))}
           onBack={() => setStage('home')}
         />
       )}

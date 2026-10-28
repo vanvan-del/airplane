@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CITIES } from '../data/cities';
-import { colors, shadow } from '../theme';
+import { ComponentType, Ref, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { WebView as RNWebView, WebViewMessageEvent, WebViewProps } from 'react-native-webview';
+import { shadow } from '../theme';
 import { Footprint } from '../types';
+import { buildMapHtml, toPins } from './mapHtml';
 
-// 地图范围大致覆盖中国
-const LON_MIN = 73;
-const LON_MAX = 135;
-const LAT_MIN = 17;
-const LAT_MAX = 54;
+// react-native-webview 的类声明默认泛型是 undefined，props 会被推成 never，这里换成明确的类型
+interface WebViewHandle {
+  injectJavaScript: (script: string) => void;
+}
+const WebView = RNWebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebViewHandle> }>;
 
 interface Props {
   footprints: Footprint[];
@@ -16,56 +17,32 @@ interface Props {
 }
 
 export default function FootprintMap({ footprints, onOpen }: Props) {
-  const [width, setWidth] = useState(0);
-  const height = width * 0.72;
-  const project = (lat: number, lon: number) => ({
-    x: ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * width,
-    y: ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * height,
-  });
-  const visited = new Set(footprints.map((f) => f.name));
+  const ref = useRef<WebViewHandle>(null);
+  const pins = toPins(footprints);
+  const pinsJson = JSON.stringify(pins);
+  // 页面只生成一次，之后足迹变化时注入新的小旗子，地图不用重新加载
+  const html = useMemo(() => buildMapHtml(pins), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    ref.current?.injectJavaScript(`window.setPins && window.setPins(${pinsJson}); true;`);
+  }, [pinsJson]);
 
   return (
-    <View style={[styles.map, { height: height || 240 }]} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 &&
-        CITIES.filter((c) => !visited.has(c.name)).map((c) => {
-          const p = project(c.lat, c.lon);
-          return <View key={c.name} style={[styles.dot, { left: p.x - 3, top: p.y - 3 }]} />;
-        })}
-      {width > 0 &&
-        footprints.map((f) => {
-          const p = project(f.lat, f.lon);
-          return (
-            <Pressable key={f.name} style={[styles.pin, { left: p.x - 12, top: p.y - 26 }]} onPress={() => onOpen(f.name)} hitSlop={6}>
-              <Text style={styles.flag}>🚩</Text>
-              <Text style={styles.pinLabel}>{f.name}</Text>
-            </Pressable>
-          );
-        })}
-      {footprints.length === 0 && <Text style={styles.empty}>还没有点亮任何城市，快出发吧 ✈️</Text>}
+    <View style={styles.map}>
+      <WebView
+        ref={ref}
+        source={{ html }}
+        originWhitelist={['*']}
+        onMessage={(e: WebViewMessageEvent) => onOpen(e.nativeEvent.data)}
+        style={styles.web}
+        scrollEnabled={false}
+        nestedScrollEnabled
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  map: {
-    backgroundColor: '#DFF1FF',
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: '#fff',
-    overflow: 'hidden',
-    ...shadow,
-  },
-  dot: { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: '#A9C7E3' },
-  pin: { position: 'absolute', alignItems: 'center' },
-  flag: { fontSize: 20 },
-  pinLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.navy,
-    backgroundColor: colors.sun,
-    paddingHorizontal: 5,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  empty: { position: 'absolute', alignSelf: 'center', top: '45%', color: colors.muted, fontWeight: '700' },
+  map: { height: 340, borderRadius: 24, borderWidth: 3, borderColor: '#fff', overflow: 'hidden', ...shadow },
+  web: { flex: 1, backgroundColor: '#DFF1FF' },
 });

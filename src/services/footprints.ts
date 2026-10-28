@@ -20,13 +20,17 @@ export async function saveFootprints(list: Footprint[]): Promise<void> {
 }
 
 export function newFootprint(place: Place, date: string): Footprint {
-  return { name: place.name, lat: place.lat, lon: place.lon, visits: [date], photos: [], note: '' };
+  return { name: place.name, country: place.country, lat: place.lat, lon: place.lon, visits: [date], photos: [], note: '' };
 }
 
 // 照片复制进 App 自己的文件夹，只存文件名：相册里删了原图、或者 App 更新后路径变了，记忆都还在
 export function photoUri(m: Memory): string {
   if (m.file.includes('://')) return m.file;
-  return new File(Paths.document, PHOTO_DIR, m.file).uri;
+  try {
+    return new File(Paths.document, PHOTO_DIR, m.file).uri;
+  } catch {
+    return m.file;
+  }
 }
 
 async function keepCopy(sourceUri: string): Promise<string> {

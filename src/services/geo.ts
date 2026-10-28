@@ -2,7 +2,7 @@ import { findBuiltInCity, normalizeCityName } from '../data/cities';
 import { Place } from '../types';
 
 interface GeocodeResult {
-  results?: Array<{ name: string; latitude: number; longitude: number }>;
+  results?: Array<{ name: string; latitude: number; longitude: number; country?: string }>;
 }
 
 // 先查内置城市，查不到再用 Open-Meteo 免费地名解析（不需要密钥）
@@ -19,7 +19,7 @@ export async function resolvePlace(input: string): Promise<Place | null> {
     const data: GeocodeResult = await res.json();
     const hit = data.results?.[0];
     if (!hit) return null;
-    return { name, lat: hit.latitude, lon: hit.longitude };
+    return { name, lat: hit.latitude, lon: hit.longitude, country: hit.country };
   } catch {
     return null;
   }
