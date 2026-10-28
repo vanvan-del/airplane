@@ -48,3 +48,7 @@ src/components/          云朵、飞行动画、各个详情面板
 src/services/            地名解析、天气、票价估算和购票链接、穿搭建议、足迹和照片存储
 src/data/cities.ts       城市坐标和攻略数据
 ```
+
+## 其他工具
+
+- [`layout-editor/`](layout-editor/)：自用的网页排版编辑器（多页面、共用素材库、图层、自动保存、导入导出），双击启动脚本即可使用。
