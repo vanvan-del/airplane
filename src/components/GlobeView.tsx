@@ -1,30 +1,12 @@
 import { geoArea, geoCentroid, geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
-import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import type { Feature } from 'geojson';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
-import { feature } from 'topojson-client';
-import type { GeometryCollection, Topology } from 'topojson-specification';
-import countries110m from 'world-atlas/countries-110m.json';
+import { COUNTRIES, COUNTRY_NAMES } from '../data/world';
 import { colors, shadow } from '../theme';
 import { Footprint } from '../types';
 
-// 国家编号（ISO 3166 数字码）→ 中文名，只给面积较大或常去的国家标名字
-const COUNTRY_NAMES: Record<string, string> = {
-  '156': '中国', '392': '日本', '410': '韩国', '408': '朝鲜', '496': '蒙古', '643': '俄罗斯', '356': '印度',
-  '398': '哈萨克斯坦', '764': '泰国', '704': '越南', '418': '老挝', '104': '缅甸', '458': '马来西亚',
-  '360': '印度尼西亚', '608': '菲律宾', '116': '柬埔寨', '524': '尼泊尔', '586': '巴基斯坦', '004': '阿富汗',
-  '364': '伊朗', '682': '沙特', '792': '土耳其', '036': '澳大利亚', '554': '新西兰', '840': '美国',
-  '124': '加拿大', '484': '墨西哥', '076': '巴西', '032': '阿根廷', '152': '智利', '604': '秘鲁',
-  '170': '哥伦比亚', '826': '英国', '250': '法国', '276': '德国', '380': '意大利', '724': '西班牙',
-  '620': '葡萄牙', '578': '挪威', '752': '瑞典', '246': '芬兰', '616': '波兰', '804': '乌克兰',
-  '756': '瑞士', '300': '希腊', '528': '荷兰', '818': '埃及', '710': '南非', '566': '尼日利亚',
-  '404': '肯尼亚', '231': '埃塞俄比亚', '012': '阿尔及利亚', '434': '利比亚', '729': '苏丹',
-  '180': '刚果（金）', '304': '格陵兰', '352': '冰岛',
-};
-
-const topo = countries110m as unknown as Topology<{ countries: GeometryCollection }>;
-const COUNTRIES = (feature(topo, topo.objects.countries) as FeatureCollection<Geometry, { name: string }>).features;
 const GRATICULE = geoGraticule10();
 const SPHERE = { type: 'Sphere' } as const;
 const LABELS = COUNTRIES.filter((f) => f.id != null && COUNTRY_NAMES[String(f.id)]).map((f) => ({

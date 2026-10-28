@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import FootprintMap from '../components/FootprintMap';
 import GlobeView from '../components/GlobeView';
 import { CITIES } from '../data/cities';
-import { photoUri } from '../services/footprints';
+import PhotoImage from '../components/PhotoImage';
 import { ScanProgress, scanAlbum } from '../services/photoScan';
 import { colors, shadow, topInset } from '../theme';
 import { Footprint } from '../types';
@@ -24,24 +24,38 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'globe' | 'map'>('globe');
   const [progress, setProgress] = useState<ScanProgress | null>(null);
+  // 扫描结果直接显示在页面上（网页版不支持系统弹窗）
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
   const cancelled = useRef(false);
   const photoCount = footprints.reduce((n, f) => n + f.photos.length, 0);
   const countries = new Set(footprints.map((f) => f.country ?? '中国'));
 
   const scan = async () => {
     cancelled.current = false;
-    setProgress({ stage: 'reading', done: 0, total: 0 });
-    const result = await scanAlbum(setProgress, () => cancelled.current);
+    setNotice(null);
+    // 已经导入过的照片不再重复处理
+    const known = new Set(footprints.flatMap((f) => f.photos.map((p) => p.assetId).filter((id): id is string => !!id)));
+    const result = await scanAlbum(setProgress, () => cancelled.current, known);
     setProgress(null);
     if (!result.ok) {
-      if (!cancelled.current) Alert.alert('没能扫描相册', result.reason);
+      if (!cancelled.current && result.reason !== '已取消') setNotice({ title: '没能扫描相册', text: result.reason });
       return;
     }
     onImport(result.footprints);
-    Alert.alert(
-      '扫描完成 🎉',
-      `看了 ${result.scanned} 张照片，其中 ${result.located} 张带拍摄地点，识别出 ${result.footprints.length} 个城市：\n` +
-        (result.footprints.map((f) => f.name).join('、') || '（没有找到）'),
+    setNotice(
+      result.located === 0
+        ? {
+            title: '这些照片里没有拍摄地点',
+            text:
+              `看了 ${result.scanned} 张照片，都没有记录位置。拍照时要打开相机的定位；` +
+              '另外手机浏览器上传照片时常常会去掉位置信息，在电脑上选照片或者用手机 App 扫描更可靠。',
+          }
+        : {
+            title: '扫描完成 🎉',
+            text:
+              `看了 ${result.scanned} 张照片，其中 ${result.located} 张带拍摄地点，识别出 ${result.footprints.length} 个地方：` +
+              result.footprints.map((f) => f.name).join('、'),
+          },
     );
   };
   const sorted = [...footprints].sort((a, b) => (b.visits.at(-1) ?? '').localeCompare(a.visits.at(-1) ?? ''));
@@ -87,9 +101,22 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
         </Text>
 
         <Pressable style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.85 }]} onPress={scan}>
-          <Text style={styles.scanText}>📸 扫描相册，自动点亮去过的地方</Text>
+          <Text style={styles.scanText}>
+            {Platform.OS === 'web' ? '📸 选一批照片，自动点亮去过的地方' : '📸 扫描相册，自动点亮去过的地方'}
+          </Text>
           <Text style={styles.scanSub}>根据照片的拍摄地点识别城市，照片自动存进对应的记忆</Text>
         </Pressable>
+        {notice && (
+          <View style={styles.notice}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeTitle}>{notice.title}</Text>
+              <Text style={styles.noticeText}>{notice.text}</Text>
+            </View>
+            <Pressable onPress={() => setNotice(null)} hitSlop={10}>
+              <Text style={styles.noticeClose}>✕</Text>
+            </Pressable>
+          </View>
+        )}
         <Text style={styles.progress}>
           已点亮 {footprints.filter((f) => CITIES.some((c) => c.name === f.name)).length} / {CITIES.length} 个热门城市
         </Text>
@@ -107,7 +134,7 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
         {sorted.map((f) => (
           <Pressable key={f.name} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]} onPress={() => onOpen(f.name)}>
             {f.photos[0] ? (
-              <Image source={{ uri: photoUri(f.photos[0]) }} style={styles.cover} />
+              <PhotoImage memory={f.photos[0]} style={styles.cover} />
             ) : (
               <View style={[styles.cover, styles.coverEmpty]}>
                 <Text style={{ fontSize: 30 }}>📷</Text>
@@ -176,6 +203,10 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
   mapHint: { textAlign: 'center', color: colors.muted, fontSize: 12, marginTop: 8 },
   scanBtn: { backgroundColor: colors.coral, borderRadius: 18, padding: 14, marginTop: 14, alignItems: 'center', ...shadow },
+  notice: { flexDirection: 'row', gap: 10, backgroundColor: colors.card, borderRadius: 16, padding: 14, marginTop: 10, ...shadow },
+  noticeTitle: { fontSize: 15, fontWeight: '900', color: colors.navy },
+  noticeText: { fontSize: 13, color: colors.muted, lineHeight: 19, marginTop: 4 },
+  noticeClose: { fontSize: 16, color: colors.muted, fontWeight: '700' },
   scanText: { color: '#fff', fontSize: 16, fontWeight: '900' },
   scanSub: { color: '#fff', fontSize: 12, opacity: 0.9, marginTop: 4 },
   overlay: { flex: 1, backgroundColor: 'rgba(29,53,87,0.45)', alignItems: 'center', justifyContent: 'center' },

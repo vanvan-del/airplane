@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { deletePhotoFile, photoUri, pickFromAlbum, takePhoto } from '../services/footprints';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import PhotoImage from '../components/PhotoImage';
+import { deletePhotoFile, pickFromAlbum, takePhoto } from '../services/footprints';
 import { colors, shadow, topInset } from '../theme';
 import { Footprint, Memory } from '../types';
 import { toDateString } from './HomeScreen';
@@ -18,6 +19,9 @@ interface Props {
 export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: Props) {
   const [note, setNote] = useState(footprint.note);
   const [viewing, setViewing] = useState<Memory | null>(null);
+  // 提示和删除确认都直接显示在页面里（网页版不支持系统弹窗）
+  const [message, setMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const today = toDateString(new Date());
   // 每次保存都带上正在编辑的文字，避免还没失焦的内容被覆盖
   const update = (patch: Partial<Footprint>) => onChange({ ...footprint, note, ...patch });
@@ -25,7 +29,7 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
   const addPhotos = async (source: 'album' | 'camera') => {
     const added = source === 'album' ? await pickFromAlbum() : await takePhoto();
     if (added === 'denied') {
-      Alert.alert('没有相机权限', '请在系统设置里允许「小飞机去旅行」使用相机');
+      setMessage('没有相机权限：请在系统设置里允许「小飞机去旅行」使用相机');
       return;
     }
     if (added.length > 0) update({ photos: [...added, ...footprint.photos] });
@@ -37,18 +41,10 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
     setViewing(null);
   };
 
-  const confirmRemovePlace = () =>
-    Alert.alert(`删除「${footprint.name}」的足迹？`, '这里的照片和文字也会一起删除', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: () => {
-          footprint.photos.forEach(deletePhotoFile);
-          onRemove();
-        },
-      },
-    ]);
+  const removePlace = () => {
+    footprint.photos.forEach(deletePhotoFile);
+    onRemove();
+  };
 
   return (
     <View style={styles.root}>
@@ -90,6 +86,7 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
         <View style={styles.photoHeader}>
           <Text style={styles.section}>🖼️ 照片（{footprint.photos.length}）</Text>
         </View>
+        {message && <Text style={styles.message}>⚠️ {message}</Text>}
         <View style={styles.actions}>
           <Pressable style={[styles.actionBtn, { backgroundColor: colors.skyDeep }]} onPress={() => addPhotos('album')}>
             <Text style={styles.actionText}>🖼️ 从相册添加</Text>
@@ -102,21 +99,35 @@ export default function MemoryScreen({ footprint, onChange, onRemove, onBack }: 
         <View style={styles.grid}>
           {footprint.photos.map((m) => (
             <Pressable key={m.id} onPress={() => setViewing(m)}>
-              <Image source={{ uri: photoUri(m) }} style={styles.photo} />
+              <PhotoImage memory={m} style={styles.photo} />
             </Pressable>
           ))}
         </View>
         {footprint.photos.length === 0 && <Text style={styles.empty}>还没有照片，把这里的回忆存进来吧 📸</Text>}
 
-        <Pressable onPress={confirmRemovePlace} style={styles.removePlace}>
-          <Text style={styles.removeText}>删除这个足迹</Text>
-        </Pressable>
+        {confirming ? (
+          <View style={styles.confirm}>
+            <Text style={styles.confirmText}>删除「{footprint.name}」的足迹？这里的照片和文字也会一起删除。</Text>
+            <View style={styles.actions}>
+              <Pressable style={[styles.actionBtn, { backgroundColor: colors.line }]} onPress={() => setConfirming(false)}>
+                <Text style={[styles.actionText, { color: colors.navy }]}>取消</Text>
+              </Pressable>
+              <Pressable style={[styles.actionBtn, { backgroundColor: colors.coral }]} onPress={removePlace}>
+                <Text style={styles.actionText}>删除</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable onPress={() => setConfirming(true)} style={styles.removePlace}>
+            <Text style={styles.removeText}>删除这个足迹</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       <Modal visible={viewing != null} transparent animationType="fade" onRequestClose={() => setViewing(null)}>
         <View style={styles.viewer}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setViewing(null)} />
-          {viewing && <Image source={{ uri: photoUri(viewing) }} style={styles.full} resizeMode="contain" />}
+          {viewing && <PhotoImage memory={viewing} style={styles.full} resizeMode="contain" />}
           <View style={styles.viewerBar}>
             <Pressable onPress={() => viewing && removePhoto(viewing)} style={styles.viewerBtn}>
               <Text style={styles.viewerText}>🗑️ 删除</Text>
@@ -165,6 +176,9 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   photo: { width: TILE, height: TILE, borderRadius: 12, backgroundColor: colors.line },
   empty: { color: colors.muted, textAlign: 'center', marginTop: 12 },
+  message: { color: colors.coral, fontWeight: '700', marginBottom: 10 },
+  confirm: { marginTop: 28, backgroundColor: colors.card, borderRadius: 16, padding: 14, ...shadow },
+  confirmText: { color: colors.navy, fontWeight: '700', marginBottom: 12, lineHeight: 20 },
   removePlace: { alignSelf: 'center', marginTop: 32, padding: 8 },
   removeText: { color: colors.muted, textDecorationLine: 'underline' },
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center' },

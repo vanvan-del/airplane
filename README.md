@@ -33,6 +33,23 @@ npx expo start
 
 手机上装 **Expo Go**，扫终端里的二维码就能打开。
 
+## 网页版
+
+**在自己电脑上用（功能最全）**：装好 [Node.js](https://nodejs.org) 后运行
+
+```bash
+npm install
+npm run web
+```
+
+浏览器会打开 App，天气、高德地图、购票链接都能正常使用。
+
+**发布成网站，手机浏览器也能打开**：运行 `npm run build:web`，会生成 `dist/` 文件夹，里面就是整个网站。仓库是私有的，GitHub 自带的网页托管要付费，推荐这两个免费方式（都支持私有仓库）：
+
+- [Vercel](https://vercel.com) 或 [Cloudflare Pages](https://pages.cloudflare.com)：用 GitHub 登录，导入这个仓库，构建命令填 `npm run build:web`，输出目录填 `dist`。之后每次推送代码都会自动更新网站。
+
+网页版里「选一批照片，自动点亮」会读取照片里记录的拍摄地点。手机浏览器上传照片时常常会去掉位置信息，所以在电脑上选照片，或者用手机 App 扫描，识别得更准。
+
 ## 说明
 
 - 天气数据来自 [Open-Meteo](https://open-meteo.com)，免费、不需要密钥，可查未来 16 天。

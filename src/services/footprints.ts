@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { Footprint, Memory, Place } from '../types';
+import { deletePhoto, isIdbPhoto, savePhoto } from './webPhotos';
 
 const STORAGE_KEY = 'footprints:v1';
 const PHOTO_DIR = 'memories';
@@ -34,6 +36,13 @@ export function photoUri(m: Memory): string {
 }
 
 async function keepCopy(sourceUri: string): Promise<string> {
+  if (Platform.OS === 'web') {
+    try {
+      return await savePhoto(await (await fetch(sourceUri)).blob());
+    } catch {
+      return sourceUri;
+    }
+  }
   try {
     const dir = new Directory(Paths.document, PHOTO_DIR);
     dir.create({ intermediates: true, idempotent: true });
@@ -72,10 +81,35 @@ export async function takePhoto(): Promise<Memory[] | 'denied'> {
 }
 
 export function deletePhotoFile(m: Memory) {
+  if (isIdbPhoto(m.file)) {
+    deletePhoto(m.file);
+    return;
+  }
   if (m.file.includes('://')) return;
   try {
     new File(Paths.document, PHOTO_DIR, m.file).delete();
   } catch {
     // 文件已经不在了就算了
   }
+}
+
+/** 把扫描结果合并进已有足迹：同名城市合并日期和照片，不重复导入同一张照片 */
+export function mergeFootprints(existing: Footprint[], found: Footprint[]): Footprint[] {
+  const result = [...existing];
+  for (const f of found) {
+    const idx = result.findIndex((e) => e.name === f.name);
+    if (idx < 0) {
+      result.push(f);
+      continue;
+    }
+    const old = result[idx];
+    const known = new Set(old.photos.map((p) => p.assetId).filter(Boolean));
+    result[idx] = {
+      ...old,
+      country: old.country ?? f.country,
+      visits: [...new Set([...old.visits, ...f.visits])].sort(),
+      photos: [...old.photos, ...f.photos.filter((p) => !known.has(p.assetId))],
+    };
+  }
+  return result;
 }

@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import ExternalLink from './ExternalLink';
 import { outfitAdvice } from '../services/advice';
-import { amapSearch, baiduSearch, openUrl, xiaohongshuSearch } from '../services/links';
+import { amapSearch, baiduSearch, xiaohongshuSearch } from '../services/links';
 import { bookingLinks, estimateOptions, formatHours } from '../services/transport';
 import { colors } from '../theme';
 import { Place, Spot, WeatherInfo } from '../types';
@@ -15,11 +16,13 @@ export interface Trip {
 
 function LinkButton({ emoji, label, url, color = colors.skyDeep }: { emoji: string; label: string; url: string; color?: string }) {
   return (
-    <Pressable style={({ pressed }) => [styles.linkBtn, { backgroundColor: color }, pressed && { opacity: 0.8 }]} onPress={() => openUrl(url)}>
-      <Text style={styles.linkText}>
-        {emoji} {label} ›
-      </Text>
-    </Pressable>
+    <ExternalLink url={url}>
+      <View style={[styles.linkBtn, { backgroundColor: color }]}>
+        <Text style={styles.linkText}>
+          {emoji} {label} ›
+        </Text>
+      </View>
+    </ExternalLink>
   );
 }
 
@@ -46,9 +49,9 @@ function SpotCard({ spot, city, showTicket }: { spot: Spot; city: string; showTi
         <Text style={styles.itemTitle}>{spot.name}</Text>
         {showTicket && <Text style={styles.ticket}>🎫 {spot.ticket}</Text>}
         <Text style={styles.itemDesc}>{spot.kind === 'photo' ? '📷 ' : '👉 '}{spot.tip}</Text>
-        <Pressable onPress={() => openUrl(amapSearch(spot.name, city))}>
+        <ExternalLink url={amapSearch(spot.name, city)}>
           <Text style={styles.inlineLink}>📍 高德导航</Text>
-        </Pressable>
+        </ExternalLink>
       </View>
     </View>
   );

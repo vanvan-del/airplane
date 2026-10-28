@@ -55,9 +55,11 @@ function tripDates(times: number[]): string[] {
  * 扫描手机相册里带拍摄地点的照片，按城市分组，生成足迹。
  * 照片只是引用相册里的原图，不会复制。
  */
-export async function scanAlbum(onProgress: (p: ScanProgress) => void, isCancelled: () => boolean): Promise<ScanResult> {
-  if (Platform.OS === 'web') return { ok: false, reason: '网页版不能读取手机相册，请在手机上使用' };
-
+export async function scanAlbum(
+  onProgress: (p: ScanProgress) => void,
+  isCancelled: () => boolean,
+  known: Set<string> = new Set(),
+): Promise<ScanResult> {
   const perm = await requestPermissionsAsync(false, ['photo']);
   if (!perm.granted) return { ok: false, reason: '没有相册权限，请在系统设置里允许访问「所有照片」' };
   // 安卓把坐标转换成城市名需要定位权限；iOS 不需要
@@ -130,7 +132,10 @@ export async function scanAlbum(onProgress: (p: ScanProgress) => void, isCancell
   // 4. 每个城市取最新的几张照片作为记忆
   const footprints: Footprint[] = [];
   for (const [name, { country, points }] of cities) {
-    const newest = [...points].sort((a, b) => b.time - a.time).slice(0, PHOTOS_PER_CITY);
+    const newest = [...points]
+      .sort((a, b) => b.time - a.time)
+      .filter((p) => !known.has(p.id))
+      .slice(0, PHOTOS_PER_CITY);
     const photos: Memory[] = [];
     for (const p of newest) {
       try {
@@ -152,25 +157,4 @@ export async function scanAlbum(onProgress: (p: ScanProgress) => void, isCancell
   }
 
   return { ok: true, footprints, scanned: metas.length, located: located.length };
-}
-
-/** 把扫描结果合并进已有足迹：同名城市合并日期和照片，不重复导入同一张照片 */
-export function mergeFootprints(existing: Footprint[], found: Footprint[]): Footprint[] {
-  const result = [...existing];
-  for (const f of found) {
-    const idx = result.findIndex((e) => e.name === f.name);
-    if (idx < 0) {
-      result.push(f);
-      continue;
-    }
-    const old = result[idx];
-    const known = new Set(old.photos.map((p) => p.assetId).filter(Boolean));
-    result[idx] = {
-      ...old,
-      country: old.country ?? f.country,
-      visits: [...new Set([...old.visits, ...f.visits])].sort(),
-      photos: [...old.photos, ...f.photos.filter((p) => !known.has(p.assetId))],
-    };
-  }
-  return result;
 }
