@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { outfitAdvice } from '../services/advice';
-import { amapSearch, baiduSearch, xiaohongshuSearch } from '../services/links';
+import { baiduSearch, mapSearch, xiaohongshuSearch } from '../services/links';
+import { INTEREST_LABELS } from '../services/planner';
 import { bookingLinks, estimateOptions, formatHours } from '../services/transport';
 import { BORDER, palette, px } from '../theme';
 import { Place, Spot, WeatherInfo } from '../types';
@@ -46,13 +47,12 @@ function Badge({ label, color }: { label: string; color: string }) {
   );
 }
 
-function SearchFallback({ city, keyword }: { city: string; keyword: string }) {
+function SearchFallback({ place, keyword }: { place: Place; keyword: string }) {
   return (
     <View>
-      <Text style={[px(12), styles.body]}>暂时还没有收录「{city}」的攻略，点下面的链接看看大家的推荐：</Text>
-      <LinkButton icon="note" label={`小红书搜「${city}${keyword}」`} url={xiaohongshuSearch(city + keyword)} color={palette.red} />
-      <LinkButton icon="map" label="高德地图搜索" url={amapSearch(keyword, city)} />
-      <LinkButton icon="globe" label="百度搜索" url={baiduSearch(city + keyword)} color={palette.slate} />
+      <Text style={[px(12), styles.body]}>暂时没有「{place.name}」的{keyword}资料，可以在地图上搜一搜：</Text>
+      <LinkButton icon="map" label={`地图搜索「${keyword}」`} url={mapSearch(keyword, place)} />
+      <LinkButton icon="note" label={`小红书搜「${place.name}${keyword}」`} url={xiaohongshuSearch(place.name + keyword)} color={palette.red} />
     </View>
   );
 }
@@ -66,24 +66,46 @@ function Item({ icon, children, highlight }: { icon: IconName; children: React.R
   );
 }
 
-function SpotCard({ spot, city, showTicket }: { spot: Spot; city: string; showTicket?: boolean }) {
+export function TagList({ spot }: { spot: Spot }) {
+  return (
+    <View style={styles.row}>
+      {spot.tags.map((t) => (
+        <View key={t} style={styles.tag}>
+          <Text style={px(12)}>{INTEREST_LABELS[t]}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function StoryBox({ text }: { text: string }) {
+  return (
+    <View style={styles.story}>
+      <Text style={px(12, palette.plum)}>【故事】</Text>
+      <Text style={px(12, palette.ink)}>{text}</Text>
+    </View>
+  );
+}
+
+function SpotCard({ spot, place, showTicket }: { spot: Spot; place: Place; showTicket?: boolean }) {
   return (
     <Item icon={spot.kind === 'photo' ? 'camera' : 'temple'}>
       <Text style={px(18)}>{spot.name}</Text>
+      <TagList spot={spot} />
       {showTicket && <Text style={px(12, palette.red)}>门票：{spot.ticket}</Text>}
       <Text style={px(12, palette.slate)}>
-        {spot.kind === 'photo' ? '拍照：' : '提示：'}
-        {spot.tip}
+        建议 {spot.hours} 小时 · {spot.tip}
       </Text>
-      <ExternalLink url={amapSearch(spot.name, city)}>
-        <Text style={px(12, palette.blue)}>▶ 高德导航</Text>
+      <StoryBox text={spot.story} />
+      <ExternalLink url={mapSearch(spot.name, place)}>
+        <Text style={px(12, palette.blue)}>▶ 地图导航</Text>
       </ExternalLink>
     </Item>
   );
 }
 
 export function TransportSection({ trip }: { trip: Trip }) {
-  const options = estimateOptions(trip.km);
+  const options = estimateOptions(trip.from, trip.to, trip.km);
   const links = bookingLinks(trip.from, trip.to, trip.date, trip.km);
   return (
     <View>
@@ -117,11 +139,12 @@ export function TransportSection({ trip }: { trip: Trip }) {
 export function SpotsSection({ trip, kind }: { trip: Trip; kind: Spot['kind'] }) {
   const city = trip.to.name;
   const spots = trip.to.guide?.spots.filter((s) => s.kind === kind) ?? [];
-  if (spots.length === 0) return <SearchFallback city={city} keyword={kind === 'photo' ? '拍照打卡' : '必去景点'} />;
+  if (spots.length === 0) return <SearchFallback place={trip.to} keyword={kind === 'photo' ? '拍照打卡' : '景点'} />;
   return (
     <View>
+      {trip.to.guide?.intro && kind === 'sight' && <StoryBox text={trip.to.guide.intro} />}
       {spots.map((s) => (
-        <SpotCard key={s.name} spot={s} city={city} showTicket={kind === 'sight'} />
+        <SpotCard key={s.name} spot={s} place={trip.to} showTicket={kind === 'sight'} />
       ))}
       <LinkButton
         icon="note"
@@ -174,7 +197,7 @@ export function WeatherSection({ trip }: { trip: Trip }) {
 export function FoodSection({ trip }: { trip: Trip }) {
   const city = trip.to.name;
   const foods = trip.to.guide?.foods ?? [];
-  if (foods.length === 0) return <SearchFallback city={city} keyword="美食" />;
+  if (foods.length === 0) return <SearchFallback place={trip.to} keyword="美食" />;
   return (
     <View>
       <View style={styles.foodGrid}>
@@ -186,27 +209,8 @@ export function FoodSection({ trip }: { trip: Trip }) {
           </PixelBox>
         ))}
       </View>
-      <LinkButton icon="map" label="高德地图找附近美食" url={amapSearch('美食', city)} />
+      <LinkButton icon="map" label="地图上找附近美食" url={mapSearch(trip.to.country && trip.to.country !== '中国' ? 'restaurant' : '美食', trip.to)} />
       <LinkButton icon="note" label={`小红书搜「${city}美食」`} url={xiaohongshuSearch(city + '美食')} color={palette.red} />
-    </View>
-  );
-}
-
-export function RouteSection({ trip }: { trip: Trip }) {
-  const city = trip.to.name;
-  const route = trip.to.guide?.route ?? [];
-  if (route.length === 0) return <SearchFallback city={city} keyword="旅游路线" />;
-  return (
-    <View>
-      {route.map((r, i) => (
-        <View key={r} style={styles.routeRow}>
-          <View style={styles.routeNum}>
-            <Text style={px(12, palette.white)}>{i + 1}</Text>
-          </View>
-          <Text style={[px(12), { flex: 1 }]}>{r.replace(/^第\d+天：/, '')}</Text>
-        </View>
-      ))}
-      <LinkButton icon="note" label={`小红书搜「${city}旅游攻略」`} url={xiaohongshuSearch(city + '旅游攻略')} color={palette.red} />
     </View>
   );
 }
@@ -214,7 +218,7 @@ export function RouteSection({ trip }: { trip: Trip }) {
 export function TicketSection({ trip }: { trip: Trip }) {
   const city = trip.to.name;
   const spots = trip.to.guide?.spots ?? [];
-  if (spots.length === 0) return <SearchFallback city={city} keyword="景点门票" />;
+  if (spots.length === 0) return <SearchFallback place={trip.to} keyword="景点门票" />;
   return (
     <View>
       {spots.map((s) => (
@@ -248,5 +252,7 @@ const styles = StyleSheet.create({
   foodInner: { alignItems: 'center', padding: 8, gap: 4 },
   routeRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 10 },
   routeNum: { width: 28, height: 28, backgroundColor: palette.blue, borderWidth: BORDER, borderColor: palette.ink, alignItems: 'center', justifyContent: 'center' },
+  tag: { borderWidth: 2, borderColor: palette.ink, backgroundColor: palette.cyan, paddingHorizontal: 4 },
+  story: { backgroundColor: '#FFF3DA', borderLeftWidth: 4, borderColor: palette.plum, padding: 8, marginVertical: 4 },
   ticketRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 2, borderColor: palette.grey },
 });

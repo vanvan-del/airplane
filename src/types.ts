@@ -1,25 +1,36 @@
 export type SpotKind = 'sight' | 'photo';
 
+/** 旅行兴趣：人文历史、自然风景、拍照打卡、艺术博物馆、名人足迹、运动户外、夜景夜生活 */
+export type Interest = 'culture' | 'nature' | 'photo' | 'art' | 'people' | 'sport' | 'night';
+
 export interface Spot {
   name: string;
-  emoji: string;
   kind: SpotKind;
+  tags: Interest[];
+  /** 所在片区，排行程时同一片区的放在同一天 */
+  area: string;
+  /** 建议游玩时长（小时） */
+  hours: number;
   /** 门票参考，以景区官方公布为准 */
   ticket: string;
   tip: string;
+  /** 历史和故事背景 */
+  story: string;
 }
 
 export interface Food {
   name: string;
-  emoji: string;
   desc: string;
 }
 
 export interface CityGuide {
+  /** 城市的历史和故事简介 */
+  intro: string;
   spots: Spot[];
   foods: Food[];
-  route: string[];
 }
+
+export type Region = 'china' | 'europe' | 'asia' | 'americas' | 'other';
 
 export interface Place {
   name: string;
@@ -28,6 +39,10 @@ export interface Place {
   /** 城市三字码，用于拼携程机票链接 */
   code?: string;
   country?: string;
+  /** 英文名，用于国外订票和地图链接 */
+  en?: string;
+  /** 大致区域，用来判断能不能坐火车、要不要坐国际航班 */
+  region?: Region;
   guide?: CityGuide;
 }
 

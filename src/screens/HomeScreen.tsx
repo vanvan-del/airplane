@@ -4,7 +4,7 @@ import Clouds from '../components/Clouds';
 import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
 import PixelChip, { pixelInput } from '../components/pixel/PixelChip';
 import PixelIcon from '../components/pixel/PixelIcon';
-import { HOT_DESTINATIONS } from '../data/cities';
+import { HOT_DESTINATIONS, WORLD_DESTINATIONS } from '../data/cities';
 import { palette, px, steps, topInset } from '../theme';
 
 export interface TripQuery {
@@ -78,7 +78,7 @@ export default function HomeScreen({ initial, error, footprintCount, onTakeOff, 
           <PixelIcon name="plane" scale={7} />
         </Animated.View>
         <Text style={[px(36, palette.white), styles.title]}>小飞机去旅行</Text>
-        <Text style={[px(12, palette.ink), styles.subtitle]}>输入目的地，帮你找最省钱的出行方式</Text>
+        <Text style={[px(12, palette.ink), styles.subtitle]}>输入目的地，帮你找最省钱的出行方式、定制攻略</Text>
 
         <PixelButton onPress={onFootprints} style={styles.footprintBtn} bg={palette.yellow} contentStyle={styles.row}>
           <PixelIcon name="globe" scale={2} />
@@ -134,10 +134,19 @@ export default function HomeScreen({ initial, error, footprintCount, onTakeOff, 
 
         <View style={[styles.row, { marginTop: 20 }]}>
           <PixelIcon name="star" scale={2} />
-          <Text style={px(18, palette.ink)}>热门目的地</Text>
+          <Text style={px(18, palette.ink)}>国内热门</Text>
         </View>
         <View style={styles.chips}>
           {HOT_DESTINATIONS.map((name) => (
+            <PixelChip key={name} label={name} active={to === name} onPress={() => setTo(name)} />
+          ))}
+        </View>
+        <View style={[styles.row, { marginTop: 10 }]}>
+          <PixelIcon name="globe" scale={2} />
+          <Text style={px(18, palette.ink)}>国外热门</Text>
+        </View>
+        <View style={styles.chips}>
+          {WORLD_DESTINATIONS.map((name) => (
             <PixelChip key={name} label={name} active={to === name} onPress={() => setTo(name)} />
           ))}
         </View>

@@ -1,11 +1,11 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import PlannerSection from '../components/Planner';
 import { PixelBox, PixelButton } from '../components/pixel/PixelBox';
 import PixelIcon from '../components/pixel/PixelIcon';
 import { IconName } from '../components/pixel/icons';
 import {
   FoodSection,
-  RouteSection,
   SpotsSection,
   TicketSection,
   TransportSection,
@@ -23,13 +23,13 @@ interface Tile {
 }
 
 const TILES: Tile[] = [
+  { key: 'plan', icon: 'star', title: '定制攻略', color: palette.yellow, render: (t) => <PlannerSection trip={t} /> },
   { key: 'transport', icon: 'train', title: '交通比价', color: palette.orange, render: (t) => <TransportSection trip={t} /> },
   { key: 'sights', icon: 'temple', title: '必去景点', color: palette.cyan, render: (t) => <SpotsSection trip={t} kind="sight" /> },
   { key: 'photo', icon: 'camera', title: '打卡拍照', color: palette.lime, render: (t) => <SpotsSection trip={t} kind="photo" /> },
   { key: 'weather', icon: 'sun', title: '天气穿搭', color: palette.sky, render: (t) => <WeatherSection trip={t} /> },
   { key: 'food', icon: 'bowl', title: '地道美食', color: palette.white, render: (t) => <FoodSection trip={t} /> },
-  { key: 'route', icon: 'map', title: '推荐路线', color: palette.grey, render: (t) => <RouteSection trip={t} /> },
-  { key: 'ticket', icon: 'ticket', title: '门票指南', color: palette.yellow, render: (t) => <TicketSection trip={t} /> },
+  { key: 'ticket', icon: 'ticket', title: '门票指南', color: palette.grey, render: (t) => <TicketSection trip={t} /> },
 ];
 
 // 关卡图标：依次“咔”地弹出来，只有 3 个缩放档位

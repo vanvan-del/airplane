@@ -11,6 +11,7 @@ import ResultScreen from './src/screens/ResultScreen';
 import { loadFootprints, mergeFootprints, newFootprint, saveFootprints } from './src/services/footprints';
 import { distanceKm, resolvePlace } from './src/services/geo';
 import { getWeather } from './src/services/weather';
+import { wikiGuide } from './src/services/wikiGuide';
 import { FONT, palette } from './src/theme';
 import { Footprint, Place } from './src/types';
 
@@ -20,8 +21,13 @@ async function planTrip(q: TripQuery): Promise<Trip> {
   const [from, to] = await Promise.all([resolvePlace(q.from), resolvePlace(q.to)]);
   if (!from) throw new Error(`找不到出发地「${q.from}」，换个写法试试`);
   if (!to) throw new Error(`找不到目的地「${q.to}」，换个写法试试`);
-  const weather = await getWeather(to.lat, to.lon, q.date);
-  return { from, to, date: q.date, km: distanceKm(from, to), weather };
+  // 没收录攻略的城市，查维基百科临时拼一份，和天气一起查
+  const [weather, guide] = await Promise.all([
+    getWeather(to.lat, to.lon, q.date),
+    to.guide ? Promise.resolve(to.guide) : wikiGuide(to),
+  ]);
+  const dest: Place = guide && !to.guide ? { ...to, guide } : to;
+  return { from, to: dest, date: q.date, km: distanceKm(from, to), weather };
 }
 
 export default function App() {
