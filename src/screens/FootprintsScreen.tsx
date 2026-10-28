@@ -117,7 +117,7 @@ export default function FootprintsScreen({ footprints, onOpen, onAdd, onImport, 
           <PixelButton style={{ flex: 1 }} bg={palette.plum} onPress={onReplay} contentStyle={styles.scanBtn}>
             <View style={styles.row}>
               <PixelIcon name="play" scale={2} tint={palette.white} />
-              <Text style={px(12, palette.white)}>旅行回放</Text>
+              <Text style={px(12, palette.white)}>旅行钉板</Text>
             </View>
           </PixelButton>
           <PixelButton style={{ flex: 1 }} bg={palette.yellow} onPress={onCompanions} contentStyle={styles.scanBtn}>

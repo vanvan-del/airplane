@@ -249,6 +249,7 @@ export const ICONS = {
   minus: ['kkkkkkkkkk', 'kkkkkkkkkk'],
   pause: ['kkk..kkk', 'kkk..kkk', 'kkk..kkk', 'kkk..kkk', 'kkk..kkk', 'kkk..kkk', 'kkk..kkk'],
   play: ['kk......', 'kkkk....', 'kkkkkk..', 'kkkkkkkk', 'kkkkkk..', 'kkkk....', 'kk......'],
+  pushpin: ['..rrr..', '.rrwrr.', '.rrrrr.', '..rrr..', '...k...', '...k...', '...k...'],
   heart: [
     '.kk...kk...',
     'krrk.krrk..',

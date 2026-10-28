@@ -125,7 +125,7 @@ export default function CompanionsScreen({ companions, footprints, onChange, onA
 
         <PixelButton bg={palette.orange} contentStyle={styles.btn} onPress={() => onReplay()}>
           <PixelIcon name="play" scale={2} tint={palette.white} />
-          <Text style={px(18, palette.white)}>播放我的旅行回放</Text>
+          <Text style={px(18, palette.white)}>看我的旅行钉板</Text>
         </PixelButton>
 
         {companions
@@ -135,7 +135,7 @@ export default function CompanionsScreen({ companions, footprints, onChange, onA
               <PixelAvatar avatar={c.avatar} scale={2} />
               <Text style={[px(12), { flex: 1 }]}>和{c.name}</Text>
               <PixelButton contentStyle={styles.small} onPress={() => onReplay(c.id)}>
-                <Text style={px(12)}>回放</Text>
+                <Text style={px(12)}>钉板</Text>
               </PixelButton>
               <PixelButton bg={palette.yellow} contentStyle={styles.small} onPress={() => showInvite(c)}>
                 <Text style={px(12)}>邀请</Text>
